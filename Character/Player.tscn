@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://cf4q7x3w8n1op"]
+
+[ext_resource type="Script" uid="uid://xuu8argn7ifn" path="res://Areas/Player.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://8nw3qgd8r16k" path="res://Character/Character.png" id="2_tex"]
+[ext_resource type="AudioStream" uid="uid://dwo74uitcxbgn" path="res://Sounds/Pop.ogg" id="3_jump"]
+[ext_resource type="AudioStream" uid="uid://dro6ic0gku70y" path="res://Sounds/Tongue.ogg" id="4_bounce"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ball"]
+radius = 36.0
+
+[node name="Player" type="CharacterBody2D" unique_id=1885877209]
+collision_layer = 2
+floor_stop_on_slope = false
+floor_max_angle = 1.13446
+floor_snap_length = 12.0
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=903297666]
+shape = SubResource("CircleShape2D_ball")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1204723775]
+scale = Vector2(0.19, 0.19)
+texture = ExtResource("2_tex")
+
+[node name="NameLabel" type="Label" parent="." unique_id=1204723776]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -60.0
+offset_top = -62.0
+offset_right = 60.0
+offset_bottom = -39.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "Player"
+horizontal_alignment = 1
+
+[node name="JumpAudio" type="AudioStreamPlayer" parent="." unique_id=1204723777]
+stream = ExtResource("3_jump")
+
+[node name="BounceAudio" type="AudioStreamPlayer" parent="." unique_id=1204723778]
+stream = ExtResource("4_bounce")

@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bnsm0k2vnw4cf"]
+
+[ext_resource type="AudioStream" uid="uid://cnf16y13ottxi" path="res://Music/Menu.wav" id="1_tw4r6"]
+[ext_resource type="Script" uid="uid://b0mvqm0qs5nuj" path="res://Music/MusicManager.gd" id="2_dsrwk"]
+
+[node name="MusicPlayer" type="AudioStreamPlayer" unique_id=256243199]
+stream = ExtResource("1_tw4r6")
+script = ExtResource("2_dsrwk")

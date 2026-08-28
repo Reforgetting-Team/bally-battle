@@ -1,0 +1,182 @@
+[gd_scene format=3 uid="uid://c6j27k8x5n8lm"]
+
+[ext_resource type="Script" uid="uid://cjrlyj3km50k6" path="res://Scripts/Lobby.gd" id="1_lobby"]
+[ext_resource type="Texture2D" uid="uid://bsv1u63co3dpa" path="res://Menu/New Project (2).png" id="2_bg"]
+[ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="3_back"]
+[ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="4_backhover"]
+
+[node name="Lobby" type="Control" unique_id=11223344]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lobby")
+
+[node name="Background" type="TextureRect" parent="." unique_id=11223345]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_bg")
+expand_mode = 1
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=11223347]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MainVBox" type="VBoxContainer" parent="CenterContainer" unique_id=11223348]
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/MainVBox" unique_id=11223349]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Multiplayer Lobby"
+horizontal_alignment = 1
+
+[node name="NameHBox" type="HBoxContainer" parent="CenterContainer/MainVBox" unique_id=11223350]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="CenterContainer/MainVBox/NameHBox" unique_id=11223351]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Player Name:"
+
+[node name="NameInput" type="LineEdit" parent="CenterContainer/MainVBox/NameHBox" unique_id=11223352]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+placeholder_text = "Enter your nickname..."
+
+[node name="ConnectionPanel" type="VBoxContainer" parent="CenterContainer/MainVBox" unique_id=11223353]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HostButton" type="Button" parent="CenterContainer/MainVBox/ConnectionPanel" unique_id=11223354]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 22
+text = "Host Match (P2P / ZeroTier)"
+
+[node name="HostHBox" type="HBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel" unique_id=1754243754]
+layout_mode = 2
+
+[node name="HostIPInput" type="LineEdit" parent="CenterContainer/MainVBox/ConnectionPanel/HostHBox" unique_id=610035029]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Bind IP (blank = all interfaces)"
+
+[node name="HostPortInput" type="LineEdit" parent="CenterContainer/MainVBox/ConnectionPanel/HostHBox" unique_id=1749934336]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+text = "8910"
+placeholder_text = "Port"
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/MainVBox/ConnectionPanel" unique_id=11223355]
+layout_mode = 2
+
+[node name="JoinHBox" type="HBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel" unique_id=11223356]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="IPInput" type="LineEdit" parent="CenterContainer/MainVBox/ConnectionPanel/JoinHBox" unique_id=11223357]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "127.0.0.1"
+placeholder_text = "Host ZeroTier / LAN IP (e.g. 10.147.x.x)"
+
+[node name="JoinButton" type="Button" parent="CenterContainer/MainVBox/ConnectionPanel/JoinHBox" unique_id=11223358]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 20
+text = "Join Match"
+
+[node name="RoomPanel" type="VBoxContainer" parent="CenterContainer/MainVBox" unique_id=11223359]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PlayersTitle" type="Label" parent="CenterContainer/MainVBox/RoomPanel" unique_id=11223360]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Connected Players:"
+
+[node name="PlayerScroll" type="ScrollContainer" parent="CenterContainer/MainVBox/RoomPanel" unique_id=11223361]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+
+[node name="PlayerListContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/RoomPanel/PlayerScroll" unique_id=11223362]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="RoomButtonsHBox" type="HBoxContainer" parent="CenterContainer/MainVBox/RoomPanel" unique_id=11223363]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="StartButton" type="Button" parent="CenterContainer/MainVBox/RoomPanel/RoomButtonsHBox" unique_id=11223364]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 22
+text = "Start Match"
+
+[node name="LeaveButton" type="Button" parent="CenterContainer/MainVBox/RoomPanel/RoomButtonsHBox" unique_id=11223365]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 48)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 18
+text = "Leave Room"
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/MainVBox" unique_id=11223366]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BackButton" type="TextureButton" parent="." unique_id=11223346]
+unique_name_in_owner = true
+z_index = 10
+layout_mode = 1
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 84.0
+offset_bottom = 84.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("3_back")
+texture_pressed = ExtResource("4_backhover")
+texture_hover = ExtResource("4_backhover")
+ignore_texture_size = true
+stretch_mode = 0
+
+[connection signal="pressed" from="BackButton" to="." method="_on_back_pressed"]

@@ -1,0 +1,116 @@
+[gd_scene format=3 uid="uid://dohirrcflnhm"]
+
+[ext_resource type="Script" uid="uid://cqu402hxoxr6w" path="res://Scripts/facecolor.gd" id="1_6wq2d"]
+[ext_resource type="Texture2D" uid="uid://bsv1u63co3dpa" path="res://Menu/New Project (2).png" id="2_qs02i"]
+[ext_resource type="Shader" uid="uid://brxqooirjuopn" path="res://Character/recolor.gdshader" id="3_mv0qv"]
+[ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="5_cd56c"]
+[ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="6_mv0qv"]
+[ext_resource type="Texture2D" uid="uid://8nw3qgd8r16k" path="res://Character/Character.png" id="7_char"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rsrsk"]
+shader = ExtResource("3_mv0qv")
+shader_parameter/skin_color = Color(1, 1, 1, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mv0qv"]
+shader = ExtResource("3_mv0qv")
+shader_parameter/skin_color = Color(1, 1, 1, 1)
+
+[node name="CharacterCustomization" type="Control" unique_id=401795964]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control" type="Control" parent="." unique_id=94532811]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_6wq2d")
+
+[node name="TextureRect" type="TextureRect" parent="Control" unique_id=1083069547]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_qs02i")
+expand_mode = 1
+
+[node name="CenterContainer" type="CenterContainer" parent="Control" unique_id=326236282]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control/CenterContainer" unique_id=844754572]
+layout_mode = 2
+theme_override_constants/separation = 48
+alignment = 1
+
+[node name="ColorPicker" type="ColorPicker" parent="Control/CenterContainer/HBoxContainer" unique_id=1771168051]
+layout_mode = 2
+edit_alpha = false
+edit_intensity = false
+picker_shape = 1
+sampler_visible = false
+color_modes_visible = false
+sliders_visible = true
+presets_visible = false
+
+[node name="Character" type="Control" parent="Control/CenterContainer/HBoxContainer" unique_id=1171336590]
+material = SubResource("ShaderMaterial_rsrsk")
+custom_minimum_size = Vector2(300, 300)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CharacterSprite" type="Sprite2D" parent="Control/CenterContainer/HBoxContainer/Character" unique_id=1381258092]
+material = SubResource("ShaderMaterial_mv0qv")
+position = Vector2(150, 150)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("7_char")
+
+[node name="Back" type="TextureButton" parent="Control" unique_id=1587157810]
+z_index = 10
+layout_mode = 1
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 84.0
+offset_bottom = 84.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("5_cd56c")
+texture_hover = ExtResource("6_mv0qv")
+texture_pressed = ExtResource("6_mv0qv")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="DoneButton" type="Button" parent="Control" unique_id=987654321]
+z_index = 10
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -80.0
+offset_right = 120.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 28
+text = "Done"
+
+[connection signal="color_changed" from="Control/CenterContainer/HBoxContainer/ColorPicker" to="Control" method="_on_color_picker_color_changed"]
+[connection signal="pressed" from="Control/Back" to="Control" method="_on_back_pressed"]
+[connection signal="pressed" from="Control/DoneButton" to="Control" method="_on_done_pressed"]
