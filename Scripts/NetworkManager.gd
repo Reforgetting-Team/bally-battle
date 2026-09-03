@@ -33,8 +33,10 @@ static func is_in_room() -> bool:
 	return peer != null
 
 static func can_start_match() -> bool:
-	# cant start if youre alone or someone is still messing with their colors
-	if not is_host or players.is_empty():
+	# cant start if youre alone unless debug mode is active or someone is still messing with their colors/powers
+	if not is_host:
+		return false
+	if not PlayerData.debug_mode and players.size() < 2:
 		return false
 	for p in players.values():
 		if not p.get("ready", true):
@@ -76,6 +78,7 @@ func create_game(bind_address: String = "", port: int = DEFAULT_PORT) -> Error:
 	players[1] = {
 		"name": PlayerData.player_name,
 		"color": PlayerData.skin_color,
+		"powers": PlayerData.equipped_powers.duplicate(),
 		"ready": true
 	}
 	player_list_changed.emit()
@@ -111,8 +114,8 @@ func leave_game() -> void:
 	is_host = false
 	player_list_changed.emit()
 
-func update_player_info(new_name: String, new_color: Color) -> void:
-	# send our updated name/color to the host so everyone sees it
+func update_player_info(new_name: String, new_color: Color, new_powers: Array = []) -> void:
+	# send our updated name/color/powers to the host so everyone sees it
 	if peer == null:
 		return
 	var my_id = multiplayer.get_unique_id() if not is_host else 1
@@ -120,10 +123,12 @@ func update_player_info(new_name: String, new_color: Color) -> void:
 		if players.has(1):
 			players[1]["name"] = new_name
 			players[1]["color"] = new_color
+			if new_powers.size() > 0:
+				players[1]["powers"] = new_powers
 			_sync_players.rpc(players)
 			player_list_changed.emit()
 	else:
-		_update_player_info_rpc.rpc_id(1, new_name, new_color)
+		_update_player_info_rpc.rpc_id(1, new_name, new_color, new_powers)
 
 func set_player_ready(is_ready: bool) -> void:
 	# tell host if we are chilling in lobby or customizing our ball
@@ -138,7 +143,7 @@ func set_player_ready(is_ready: bool) -> void:
 		_set_player_ready_rpc.rpc_id(1, is_ready)
 
 @rpc("any_peer", "reliable")
-func _update_player_info_rpc(new_name: String, new_color: Color) -> void:
+func _update_player_info_rpc(new_name: String, new_color: Color, new_powers: Array = []) -> void:
 	# host receives updated info from a client and shares it with the class
 	if not is_host:
 		return
@@ -146,6 +151,8 @@ func _update_player_info_rpc(new_name: String, new_color: Color) -> void:
 	if players.has(sender_id):
 		players[sender_id]["name"] = new_name
 		players[sender_id]["color"] = new_color
+		if new_powers.size() > 0:
+			players[sender_id]["powers"] = new_powers
 		_sync_players.rpc(players)
 		player_list_changed.emit()
 
@@ -166,6 +173,7 @@ func _on_connected_to_server() -> void:
 	var my_info = {
 		"name": PlayerData.player_name,
 		"color": PlayerData.skin_color,
+		"powers": PlayerData.equipped_powers.duplicate(),
 		"ready": true
 	}
 	_register_player.rpc_id(1, my_info)
@@ -209,10 +217,16 @@ func _sync_players(updated_players: Dictionary) -> void:
 	players = updated_players
 	player_list_changed.emit()
 
-func start_game(scene_path: String = "res://Areas/Tutorial.tscn") -> void:
+func start_game(scene_path: String = "res://Areas/Grass1.tscn") -> void:
 	if not is_host:
 		return
 	if not can_start_match():
+		return
+	_load_match_scene.rpc(scene_path)
+
+func change_level(scene_path: String) -> void:
+	# transitions all connected players to the next level between rounds
+	if not is_host:
 		return
 	_load_match_scene.rpc(scene_path)
 

@@ -1,9 +1,14 @@
 [gd_scene format=3 uid="uid://dbndtnlawjm5v"]
 
-[ext_resource type="Texture2D" uid="uid://bsv1u63co3dpa" path="res://Menu/New Project (2).png" id="1_i26rj"]
 [ext_resource type="Texture2D" uid="uid://bn8ipe2yordlr" path="res://Menu/Play.png" id="2_eiy7p"]
 [ext_resource type="Texture2D" uid="uid://vg236dxbnuki" path="res://Menu/PlayHover.png" id="3_tma8a"]
 [ext_resource type="Script" uid="uid://bv76rabq6spgg" path="res://Menu/Play.gd" id="4_tpenk"]
+[ext_resource type="Texture2D" uid="uid://bdnyyfoch4hvn" path="res://Menu/Tutorial.png" id="5_biqin"]
+[ext_resource type="Texture2D" uid="uid://bctwmhm10uwnq" path="res://Menu/TutorialHover.png" id="6_sfxdn"]
+[ext_resource type="Script" uid="uid://iak1gj4d5ged" path="res://Menu/Tutorial.gd" id="6_um3lu"]
+[ext_resource type="Texture2D" path="res://Menu/Settings.png" id="7_settings"]
+[ext_resource type="Texture2D" path="res://Menu/SettingsHover.png" id="8_settings_hover"]
+[ext_resource type="Script" path="res://Menu/SettingsButton.gd" id="9_settings_script"]
 
 [node name="Control" type="Control" unique_id=1388597263]
 layout_mode = 3
@@ -13,17 +18,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TextureRect" type="TextureRect" parent="." unique_id=1362021574]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("1_i26rj")
-expand_mode = 1
-
-[node name="TextureButton" type="TextureButton" parent="." unique_id=1747203307]
+[node name="PlayButton" type="TextureButton" parent="." unique_id=1747203307]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -31,9 +26,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -40.0
+offset_top = -84.0
 offset_right = 200.0
-offset_bottom = 40.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -41,4 +36,42 @@ texture_normal = ExtResource("2_eiy7p")
 texture_hover = ExtResource("3_tma8a")
 script = ExtResource("4_tpenk")
 
-[connection signal="pressed" from="TextureButton" to="TextureButton" method="_on_pressed"]
+[node name="TutorialButton" type="TextureButton" parent="." unique_id=596485732]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 10.0
+offset_right = 200.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("5_biqin")
+texture_hover = ExtResource("6_sfxdn")
+script = ExtResource("6_um3lu")
+
+[node name="SettingsButton" type="TextureButton" parent="." unique_id=123456789]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 104.0
+offset_right = 200.0
+offset_bottom = 184.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("7_settings")
+texture_hover = ExtResource("8_settings_hover")
+script = ExtResource("9_settings_script")
+
+[connection signal="pressed" from="PlayButton" to="PlayButton" method="_on_pressed"]
+[connection signal="pressed" from="TutorialButton" to="TutorialButton" method="_on_pressed"]
+[connection signal="pressed" from="SettingsButton" to="SettingsButton" method="_on_pressed"]

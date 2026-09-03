@@ -23,6 +23,8 @@ const CharacterTexture = preload("res://Character/Character.png")
 var network_mgr: Node = null
 
 func _ready() -> void:
+	UITransitions.animate_in(self, [back_button])
+
 	network_mgr = get_node_or_null("/root/NetworkManager")
 	if not network_mgr:
 		network_mgr = NetworkManagerScript.instance
@@ -205,20 +207,29 @@ func _on_player_list_changed() -> void:
 
 		player_list_container.add_child(hbox)
 
-	# dont let the host start if someone is still in customization
+	# dont let the host start if alone or someone is still in customization (unless in debug mode)
 	if NetworkManagerScript.is_host:
-		if any_customizing:
+		if not PlayerData.debug_mode and NetworkManagerScript.players.size() < 2:
+			start_button.disabled = true
+			status_label.text = "Waiting for other players to join (at least 2 players needed)..."
+		elif any_customizing:
 			start_button.disabled = true
 			status_label.text = "Waiting for %s to finish customizing..." % ", ".join(customizing_names)
 		else:
 			start_button.disabled = false
-			status_label.text = "All players ready! Click Start Match when ready."
+			if PlayerData.debug_mode and NetworkManagerScript.players.size() < 2:
+				status_label.text = "[DEBUG MODE] 1-player start allowed! Click Start Match."
+			else:
+				status_label.text = "All players ready! Click Start Match when ready."
 
 func _on_start_pressed() -> void:
 	if NetworkManagerScript.is_host and network_mgr:
+		if not PlayerData.debug_mode and NetworkManagerScript.players.size() < 2:
+			status_label.text = "Cannot start match with only 1 player (at least 2 needed)!"
+			return
 		if NetworkManagerScript.can_start_match():
 			status_label.text = "Starting match..."
-			network_mgr.start_game("res://Areas/Tutorial.tscn")
+			network_mgr.start_game("res://Areas/Grass1.tscn")
 		else:
 			status_label.text = "Cannot start match while players are customizing."
 
@@ -231,6 +242,11 @@ func _on_leave_pressed() -> void:
 
 func _on_back_pressed() -> void:
 	# go back to customize without leaving room and tell host to wait up
+	back_button.disabled = true
 	if network_mgr and NetworkManagerScript.peer != null:
 		network_mgr.set_player_ready(false)
-	get_tree().change_scene_to_file("res://Menu/CharacterCustomization.tscn")
+	UITransitions.animate_out(self, _go_to_customization, [back_button])
+	UITransitions.animate_node_out_up(back_button, Callable())
+
+func _go_to_customization() -> void:
+	get_tree().change_scene_to_file("res://Menu/PowerSelection.tscn")

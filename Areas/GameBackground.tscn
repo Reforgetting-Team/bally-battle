@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://mh8o2oycillc"]
+
+[ext_resource type="Script" uid="uid://dxkylt1xaa04c" path="res://Areas/GameBackground.gd" id="1_bg_script"]
+[ext_resource type="Texture2D" uid="uid://bbf0408gwtp5i" path="res://Areas/Background.png" id="2_bg_tex"]
+[ext_resource type="Texture2D" uid="uid://5ud85ahulnkf" path="res://Areas/Terrain.png" id="3_xpol8"]
+[ext_resource type="Texture2D" uid="uid://cx6u00n3xjryx" path="res://Areas/LeftBottomCloud.png" id="4_4sxna"]
+[ext_resource type="Texture2D" uid="uid://bmad0uiekxs75" path="res://Areas/RightBottomCloud.png" id="5_efqq7"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nukdl"]
+atlas = ExtResource("3_xpol8")
+region = Rect2(285, 959, 1243, 121)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tngbh"]
+atlas = ExtResource("4_4sxna")
+region = Rect2(0, 747, 342, 333)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jp5b5"]
+atlas = ExtResource("5_efqq7")
+region = Rect2(1493, 804, 427, 276)
+
+[node name="GameBackground" type="CanvasLayer" unique_id=1948773756]
+layer = -100
+script = ExtResource("1_bg_script")
+
+[node name="BackgroundRect" type="TextureRect" parent="." unique_id=1032348103]
+texture_repeat = 2
+offset_right = 917.0
+offset_bottom = 437.0
+texture = ExtResource("2_bg_tex")
+expand_mode = 1
+stretch_mode = 1
+
+[node name="TerrainRect" type="TextureRect" parent="." unique_id=164117454]
+offset_left = 207.02269
+offset_top = 388.03983
+offset_right = 709.9773
+offset_bottom = 437.0
+texture = SubResource("AtlasTexture_nukdl")
+expand_mode = 1
+
+[node name="LeftBottomCloudRect" type="TextureRect" parent="." unique_id=1240295579]
+offset_top = 302.25833
+offset_right = 138.38333
+offset_bottom = 437.0
+texture = SubResource("AtlasTexture_tngbh")
+expand_mode = 1
+
+[node name="RightBottomCloudRect" type="TextureRect" parent="." unique_id=1669819706]
+offset_left = 744.22314
+offset_top = 325.32224
+offset_right = 917.0
+offset_bottom = 437.0
+texture = SubResource("AtlasTexture_jp5b5")
+expand_mode = 1
+
+[node name="TopCloudsContainer" type="Control" parent="." unique_id=278507902]
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2

@@ -1,11 +1,10 @@
-[gd_scene format=3 uid="uid://d14pm2rqa5sot"]
+[gd_scene format=4 uid="uid://d14pm2rqa5sot"]
 
-[ext_resource type="Texture2D" uid="uid://cpkib67f7xvw7" path="res://Areas/DefaultTileSheet.svg" id="1_3rw6v"]
 [ext_resource type="Script" uid="uid://c6s0vwyapvev8" path="res://Areas/MatchManager.gd" id="1_match"]
-[ext_resource type="Texture2D" uid="uid://bsv1u63co3dpa" path="res://Menu/New Project (2).png" id="2_2ykas"]
+[ext_resource type="Texture2D" uid="uid://c2as7teol0gsq" path="res://Areas/DefaultTileSheet.png" id="3_3rw6v"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tgqxn"]
-texture = ExtResource("1_3rw6v")
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tkhtv"]
+texture = ExtResource("3_3rw6v")
 texture_region_size = Vector2i(128, 128)
 0:0/0 = 0
 0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
@@ -35,7 +34,7 @@ texture_region_size = Vector2i(128, 128)
 [sub_resource type="TileSet" id="TileSet_8mp7d"]
 tile_size = Vector2i(128, 128)
 physics_layer_0/collision_layer = 1
-sources/2 = SubResource("TileSetAtlasSource_tgqxn")
+sources/2 = SubResource("TileSetAtlasSource_tkhtv")
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_left"]
 normal = Vector2(1, 0)
@@ -43,18 +42,16 @@ normal = Vector2(1, 0)
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_right"]
 normal = Vector2(-1, 0)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fn7em"]
+size = Vector2(2000, 400)
+
 [node name="Node2D" type="Node2D" unique_id=1694209114]
 script = ExtResource("1_match")
 
-[node name="TextureRect" type="TextureRect" parent="." unique_id=1272076775]
-z_index = -1
-offset_right = 1152.0
-offset_bottom = 648.0
-texture = ExtResource("2_2ykas")
-expand_mode = 1
-
 [node name="GroundLayer" type="TileMapLayer" parent="." unique_id=98935342]
-tile_map_data = PackedByteArray(0, 0, 2, 0, 4, 0, 2, 0, 3, 0, 0, 0, 0, 0, 4, 0, 4, 0, 2, 0, 3, 0, 0, 0, 0, 0, 6, 0, 4, 0, 2, 0, 3, 0, 0, 0, 0, 0)
+position = Vector2(0, 32.999996)
+scale = Vector2(0.8, 0.8)
+tile_map_data = PackedByteArray("AAADAAUAAgACAAAAAAAHAAUAAgADAAAAAAAEAAUAAgAAAAAAAAAFAAUAAgAAAAAAAAAGAAUAAgAAAAAAAAADAAYAAgACAAIAAAAHAAYAAgADAAIAAAAEAAYAAgAAAAAAADAFAAYAAgAAAAAAADAGAAYAAgAAAAAAADABAAQAAgADAAAAAAAAAAQAAgAAAAAAAAD//wQAAgAAAAAAAAAJAAQAAgACAAAAAAAKAAQAAgAAAAAAAAALAAQAAgAAAAAAAAAMAAQAAgADAAAAAAD+/wQAAgACAAAAAAD+/wUAAgACAAIAAAABAAUAAgADAAIAAAAMAAUAAgADAAIAAAAJAAUAAgACAAIAAAAKAAUAAgAAAAAAADALAAUAAgAAAAAAADD//wUAAgAAAAAAADAAAAUAAgAAAAAAADA=")
 tile_set = SubResource("TileSet_8mp7d")
 
 [node name="Boundaries" type="StaticBody2D" parent="." unique_id=11229988]
@@ -70,3 +67,26 @@ shape = SubResource("WorldBoundaryShape2D_right")
 
 [node name="Players" type="Node2D" parent="." unique_id=1885877209]
 z_index = 1
+
+[node name="VoidZone" type="Area2D" parent="." unique_id=1182059153]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VoidZone" unique_id=625033880]
+position = Vector2(602, 1063)
+shape = SubResource("RectangleShape2D_fn7em")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1262509878]
+
+[node name="InstructionsLabel" type="Label" parent="HUD" unique_id=705820197]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 28.0
+offset_bottom = 80.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 28
+text = "Move: A / D      Jump: W / SPACE      Dash: SHIFT / RIGHT CLICK"
+horizontal_alignment = 1
+vertical_alignment = 1

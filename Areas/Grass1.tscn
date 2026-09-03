@@ -1,0 +1,91 @@
+[gd_scene format=4 uid="uid://ef6b700rx7nh"]
+
+[ext_resource type="Script" uid="uid://c6s0vwyapvev8" path="res://Areas/MatchManager.gd" id="1_match"]
+[ext_resource type="Texture2D" uid="uid://c2as7teol0gsq" path="res://Areas/DefaultTileSheet.png" id="3_3rw6v"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tkhtv"]
+texture = ExtResource("3_3rw6v")
+texture_region_size = Vector2i(128, 128)
+0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+1:0/0 = 0
+1:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+2:0/0 = 0
+2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+3:0/0 = 0
+3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+0:1/0 = 0
+0:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+1:1/0 = 0
+1:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+2:1/0 = 0
+2:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+3:1/0 = 0
+3:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+0:2/0 = 0
+0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+1:2/0 = 0
+1:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+2:2/0 = 0
+2:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+3:2/0 = 0
+3:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+
+[sub_resource type="TileSet" id="TileSet_8mp7d"]
+tile_size = Vector2i(128, 128)
+physics_layer_0/collision_layer = 1
+sources/2 = SubResource("TileSetAtlasSource_tkhtv")
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_left"]
+normal = Vector2(1, 0)
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_right"]
+normal = Vector2(-1, 0)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fn7em"]
+size = Vector2(2000, 400)
+
+[node name="Node2D" type="Node2D" unique_id=1995859632]
+script = ExtResource("1_match")
+
+[node name="GroundLayer" type="TileMapLayer" parent="." unique_id=815167107]
+position = Vector2(13, 33)
+scale = Vector2(0.8, 0.8)
+tile_map_data = PackedByteArray("AAAAAAQAAgAAAAAAAAAKAAQAAgAAAAAAAAD//wQAAgAAAAAAAAALAAQAAgAAAAAAAAAEAAUAAgACAAAAAAAGAAUAAgADAAAAAAAFAAUAAgAAAAAAAAAIAAQAAgACAAAAAAACAAQAAgADAAAAAAABAAQAAgAAAAAAAAAJAAQAAgAAAAAAAAAMAAQAAgADAAAAAAAMAAUAAgADAAIAAAD+/wQAAgACAAAAAAD+/wUAAgACAAIAAAAGAAYAAgACAAAAADAFAAYAAgAAAAAAADAEAAYAAgADAAAAADACAAUAAgADAAIAAAAIAAUAAgACAAIAAAD//wUAAgAAAAAAADAAAAUAAgAAAAAAADABAAUAAgAAAAAAADAJAAUAAgAAAAAAADAKAAUAAgAAAAAAADALAAUAAgAAAAAAADA=")
+tile_set = SubResource("TileSet_8mp7d")
+
+[node name="Boundaries" type="StaticBody2D" parent="." unique_id=1008139893]
+collision_mask = 0
+
+[node name="LeftWall" type="CollisionShape2D" parent="Boundaries" unique_id=336383023]
+position = Vector2(0, 324)
+shape = SubResource("WorldBoundaryShape2D_left")
+
+[node name="RightWall" type="CollisionShape2D" parent="Boundaries" unique_id=613599617]
+position = Vector2(1152, 324)
+shape = SubResource("WorldBoundaryShape2D_right")
+
+[node name="Players" type="Node2D" parent="." unique_id=56397109]
+z_index = 1
+
+[node name="SpawnPoints" type="Node2D" parent="." unique_id=1250354077]
+
+[node name="Spawn1" type="Marker2D" parent="SpawnPoints" unique_id=766728060]
+position = Vector2(576, 495)
+
+[node name="Spawn2" type="Marker2D" parent="SpawnPoints" unique_id=1530828178]
+position = Vector2(101, 400)
+
+[node name="Spawn3" type="Marker2D" parent="SpawnPoints" unique_id=1695212244]
+position = Vector2(1046, 389)
+
+[node name="Spawn4" type="Marker2D" parent="SpawnPoints" unique_id=1037488330]
+position = Vector2(1051, 286)
+
+[node name="VoidZone" type="Area2D" parent="." unique_id=49102889]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VoidZone" unique_id=542030500]
+position = Vector2(602, 1063)
+shape = SubResource("RectangleShape2D_fn7em")

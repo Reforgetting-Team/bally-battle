@@ -18,7 +18,13 @@ func _ready() -> void:
 		var wav := stream as AudioStreamWAV
 		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		wav.loop_begin = 0
-		wav.loop_end = 0  # 0 = loop to the end of the sample data
+		# loop_end is a SAMPLE FRAME INDEX, not a sentinel -- 0 means
+		# "loop the first zero frames" (i.e. play nothing and stop
+		# immediately), not "loop to the end". That was why the music
+		# never audibly played: play() succeeded for a single frame
+		# then immediately stopped. Compute the real frame count from
+		# the stream's length instead.
+		wav.loop_end = int(wav.get_length() * wav.mix_rate)
 
 	get_tree().node_added.connect(_on_node_added)
 	# in case current_scene is already set by the time we connect
@@ -29,9 +35,8 @@ func _on_node_added(node: Node) -> void:
 	# we only care about the moment a new top-level scene is added
 	# directly under the tree root. We defer the actual sync because
 	# SceneTree.current_scene isn't reliably updated yet at the exact
-	# moment this signal fires (it can lag by a frame during initial
-	# boot and during change_scene_to_file) -- that lag was why the
-	# menu music never started automatically.
+	# moment this signal fires (it can lag during initial boot and
+	# during change_scene_to_file).
 	if node.get_parent() == get_tree().root:
 		call_deferred("_sync_to_current_scene")
 

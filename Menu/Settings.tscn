@@ -1,0 +1,125 @@
+[gd_scene format=3 uid="uid://settings_menu_bally"]
+
+[ext_resource type="Script" path="res://Menu/Settings.gd" id="1_settings_script"]
+[ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="2_back"]
+[ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="3_backhover"]
+
+[node name="Settings" type="Control" unique_id=99887766]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_settings_script")
+
+[node name="TitleLabel" type="Label" parent="." unique_id=99887767]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 40.0
+offset_right = 200.0
+offset_bottom = 90.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 36
+text = "SETTINGS"
+horizontal_alignment = 1
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=99887768]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -120.0
+offset_right = 250.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="CenterContainer" unique_id=99887769]
+custom_minimum_size = Vector2(460, 240)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/PanelContainer" unique_id=99887770]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer" unique_id=99887771]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="MasterBox" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=99887772]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MasterLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/MasterBox" unique_id=99887773]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "MASTER VOLUME"
+
+[node name="MasterSlider" type="HSlider" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/MasterBox" unique_id=99887774]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 1.0
+step = 0.02
+value = 1.0
+
+[node name="MusicBox" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=99887775]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MusicLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/MusicBox" unique_id=99887776]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "MUSIC VOLUME"
+
+[node name="MusicSlider" type="HSlider" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/MusicBox" unique_id=99887777]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 1.0
+step = 0.02
+value = 1.0
+
+[node name="DebugBox" type="HBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=99887779]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="DebugLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/DebugBox" unique_id=99887780]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "DEBUG MODE (F3)"
+
+[node name="DebugCheckButton" type="CheckButton" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/DebugBox" unique_id=99887781]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_default_cursor_shape = 2
+
+[node name="BackButton" type="TextureButton" parent="." unique_id=99887778]
+unique_name_in_owner = true
+z_index = 10
+layout_mode = 1
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 84.0
+offset_bottom = 84.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("2_back")
+texture_pressed = ExtResource("3_backhover")
+texture_hover = ExtResource("3_backhover")
+ignore_texture_size = true
+stretch_mode = 0
+
+[connection signal="pressed" from="BackButton" to="." method="_on_back_pressed"]

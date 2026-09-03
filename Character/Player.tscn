@@ -3,10 +3,27 @@
 [ext_resource type="Script" uid="uid://xuu8argn7ifn" path="res://Areas/Player.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://8nw3qgd8r16k" path="res://Character/Character.png" id="2_tex"]
 [ext_resource type="AudioStream" uid="uid://dwo74uitcxbgn" path="res://Sounds/Pop.ogg" id="3_jump"]
-[ext_resource type="AudioStream" uid="uid://dro6ic0gku70y" path="res://Sounds/Tongue.ogg" id="4_bounce"]
+[ext_resource type="AudioStream" uid="uid://vb33qcgauhou" path="res://Sounds/Death.ogg" id="5_dvofn"]
+[ext_resource type="Shader" path="res://Character/wind_trail.gdshader" id="6_wind_shader"]
+[ext_resource type="Script" path="res://Character/WindTrail.gd" id="7_wind_trail"]
+[ext_resource type="Script" path="res://Character/SpikesVisual.gd" id="8_spikes_script"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wind"]
+shader = ExtResource("6_wind_shader")
+shader_parameter/line_color = Color(1, 1, 1, 0.75)
+shader_parameter/line_thickness = 0.05
+shader_parameter/line_spacing = 0.25
+shader_parameter/fade_in_length = 0.42
+shader_parameter/fade_out_length = 0.12
+shader_parameter/flow_speed = 14.0
+shader_parameter/line_offsets = Vector3(0.08, 0, 0.05)
+shader_parameter/line_lengths = Vector3(0.88, 1, 0.92)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ball"]
 radius = 36.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_spikes"]
+radius = 48.0
 
 [node name="Player" type="CharacterBody2D" unique_id=1885877209]
 collision_layer = 2
@@ -19,6 +36,7 @@ script = ExtResource("1_script")
 shape = SubResource("CircleShape2D_ball")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1204723775]
+z_index = 2
 scale = Vector2(0.19, 0.19)
 texture = ExtResource("2_tex")
 
@@ -40,8 +58,35 @@ theme_override_font_sizes/font_size = 14
 text = "Player"
 horizontal_alignment = 1
 
-[node name="JumpAudio" type="AudioStreamPlayer" parent="." unique_id=1204723777]
+[node name="ImpactAudio" type="AudioStreamPlayer" parent="." unique_id=1204723777]
 stream = ExtResource("3_jump")
 
-[node name="BounceAudio" type="AudioStreamPlayer" parent="." unique_id=1204723778]
-stream = ExtResource("4_bounce")
+[node name="DeathAudio" type="AudioStreamPlayer" parent="." unique_id=2017300745]
+stream = ExtResource("5_dvofn")
+
+[node name="DashAudio" type="AudioStreamPlayer" parent="." unique_id=1204723780]
+stream = ExtResource("3_jump")
+volume_db = 2.0
+pitch_scale = 1.65
+
+[node name="WindTrail" type="Node2D" parent="." unique_id=1204723778]
+visible = false
+z_index = 1
+script = ExtResource("7_wind_trail")
+
+[node name="LineTop" type="Line2D" parent="WindTrail" unique_id=1204723781]
+
+[node name="LineMid" type="Line2D" parent="WindTrail" unique_id=1204723782]
+
+[node name="LineBot" type="Line2D" parent="WindTrail" unique_id=1204723783]
+
+[node name="SpikesVisual" type="Node2D" parent="." unique_id=1204723784]
+script = ExtResource("8_spikes_script")
+
+[node name="SpikeHitbox" type="Area2D" parent="." unique_id=1204723785]
+collision_layer = 0
+collision_mask = 2
+monitoring = false
+
+[node name="SpikeCollision" type="CollisionShape2D" parent="SpikeHitbox" unique_id=1204723786]
+shape = SubResource("CircleShape2D_spikes")
