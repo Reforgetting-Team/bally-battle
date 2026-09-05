@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://settings_menu_bally"]
+[gd_scene format=3 uid="uid://h5tlifoc07eu"]
 
-[ext_resource type="Script" path="res://Menu/Settings.gd" id="1_settings_script"]
+[ext_resource type="Script" uid="uid://clbankxe2dcup" path="res://Menu/Settings.gd" id="1_settings_script"]
 [ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="2_back"]
 [ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="3_backhover"]
 
@@ -19,9 +19,9 @@ anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -200.0
-offset_top = 40.0
+offset_top = 10.0
 offset_right = 200.0
-offset_bottom = 90.0
+offset_bottom = 60.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -60,6 +60,12 @@ layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
+[node name="AudioHeader" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=24064473]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8509804, 0.3019608, 1)
+theme_override_font_sizes/font_size = 22
+text = "AUDIO"
+
 [node name="MasterBox" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=99887772]
 layout_mode = 2
 theme_override_constants/separation = 8
@@ -91,6 +97,67 @@ layout_mode = 2
 max_value = 1.0
 step = 0.02
 value = 1.0
+
+[node name="SepAfterAudio" type="HSeparator" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1226308171]
+layout_mode = 2
+
+[node name="GraphicsHeader" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1367959980]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8509804, 0.3019608, 1)
+theme_override_font_sizes/font_size = 22
+text = "GRAPHICS"
+
+[node name="FPSBox" type="HBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=501861521]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="FPSLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/FPSBox" unique_id=1456326950]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "FPS LIMIT"
+
+[node name="FPSOptionButton" type="OptionButton" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/FPSBox" unique_id=403981412]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="VSyncBox" type="HBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=588636902]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="VSyncLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/VSyncBox" unique_id=644196661]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "VSYNC"
+
+[node name="VSyncCheckButton" type="CheckButton" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/VSyncBox" unique_id=623071034]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="WindowModeBox" type="HBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=616083523]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="WindowModeLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/WindowModeBox" unique_id=1681464102]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "WINDOW MODE"
+
+[node name="WindowModeOptionButton" type="OptionButton" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/WindowModeBox" unique_id=1049196536]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SepAfterGraphics" type="HSeparator" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=929852298]
+layout_mode = 2
+
+[node name="DebugHeader" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=528026970]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8509804, 0.3019608, 1)
+theme_override_font_sizes/font_size = 22
+text = "DEBUG"
 
 [node name="DebugBox" type="HBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=99887779]
 layout_mode = 2

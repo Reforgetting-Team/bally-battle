@@ -1,10 +1,11 @@
 @tool
 extends CanvasLayer
 
-# Global Persistent Background System:
-# - Autoloaded as "Background" so clouds NEVER reset when transitioning between menus or maps
-# - 16:9 resolutions: Displays the original full Background illustration with drifting top clouds
-# - Ultrawide / non-16:9: Displays tiled Background.png, centered Terrain, pinned bottom corner clouds, and drifting top clouds
+# global persistent background system, so ts basically handles:
+# - autoloaded as "Background" so the clouds NEVER reset when u switch between menus or maps
+# - 16:9 res: shows the og full background illustration w drifting top clouds
+# - ultrawide / non 16:9: tiles the Background.png, centers Terrain, pins the corner
+#   clouds n keeps the drifting top clouds going too
 
 const CLOUD_GAP: float = 10.0
 const DESIGN_WIDTH: float = 1920.0
@@ -34,7 +35,7 @@ var _cloud_scroll_x: float = 0.0
 var _active_cloud_nodes: Array[TextureRect] = []
 
 func _ready() -> void:
-	layer = -100 # Always render behind all menus, UI, ground tiles, and players
+	layer = -100 # always render behind literally everything, menus ui tiles players all of it
 	_setup_textures()
 	_update_layout()
 	get_viewport().size_changed.connect(_update_layout)
@@ -80,7 +81,7 @@ func _process(delta: float) -> void:
 	if step_x <= 0.0:
 		return
 
-	# Persistent cloud drift (never resets on scene changes)
+	# persistent cloud drift, this literally never resets on scene changes, thats the whole point
 	_cloud_scroll_x += cloud_scroll_speed * delta
 	if _cloud_scroll_x >= step_x:
 		_cloud_scroll_x = fmod(_cloud_scroll_x, step_x)
@@ -100,14 +101,14 @@ func _update_layout() -> void:
 	var is_standard_16_9: bool = vp_size.x <= design_w_scaled + 2.0
 
 	if is_standard_16_9:
-		# Standard 16:9: Use the original full 16:9 illustration (Menu/Background.png)
+		# standard 16:9, just use the og full illustration (Menu/Background.png)
 		if bg_rect:
 			bg_rect.texture = composite_bg_texture
 			bg_rect.stretch_mode = TextureRect.STRETCH_SCALE
 			bg_rect.size = Vector2(design_w_scaled, vp_size.y)
 			bg_rect.position = Vector2((vp_size.x - design_w_scaled) * 0.5, 0.0)
 
-		# Hide individual pieces since they are already in the 16:9 composite artwork
+		# hide the individual pieces since theyre already baked into the 16:9 composite art
 		if terrain_rect:
 			terrain_rect.visible = false
 		if left_cloud_rect:
@@ -115,7 +116,7 @@ func _update_layout() -> void:
 		if right_cloud_rect:
 			right_cloud_rect.visible = false
 	else:
-		# Ultrawide (>16:9): Tile background and anchor separate corner clouds and terrain
+		# ultrawide (>16:9), gotta tile the bg n anchor separate corner clouds n terrain
 		if bg_rect:
 			bg_rect.texture = tiled_bg_texture
 			bg_rect.stretch_mode = TextureRect.STRETCH_TILE
@@ -141,7 +142,7 @@ func _update_layout() -> void:
 			right_cloud_rect.size = rc_size
 			right_cloud_rect.position = Vector2(vp_size.x - rc_size.x, vp_size.y - rc_size.y)
 
-	# Build top drifting clouds across full width
+	# build the top drifting clouds across the whole width now
 	_rebuild_top_clouds(vp_size, scale_factor)
 
 func _rebuild_top_clouds(vp_size: Vector2, scale_factor: float) -> void:

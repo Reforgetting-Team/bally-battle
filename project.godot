@@ -13,6 +13,7 @@ config_version=5
 config/name="Bally Battle"
 run/main_scene="uid://dbndtnlawjm5v"
 config/features=PackedStringArray("4.7", "Mobile")
+boot_splash/image="uid://cwe1fhhy0bn7p"
 config/icon="uid://cb4a58eh42j2s"
 
 [autoload]
@@ -20,14 +21,16 @@ config/icon="uid://cb4a58eh42j2s"
 PlayerData="*uid://cf8v0s3o25aw"
 Music="*uid://bnsm0k2vnw4cf"
 NetworkManager="*res://Scripts/NetworkManager.gd"
-_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 Background="*res://Areas/GameBackground.tscn"
 DebugHUD="*res://Scripts/DebugHUD.gd"
+MobileControls="*res://UI/MobileControls.tscn"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
 
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+mobile/always_show_controls=false
 
 [editor_plugins]
 
@@ -71,6 +74,7 @@ spiky={
 textures/canvas_textures/default_texture_filter=3
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true
 scaling_3d/mode=5
 scaling_3d/mode.ios=5
 scaling_3d/mode.macos=5

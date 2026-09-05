@@ -1,14 +1,14 @@
 extends Node2D
 
-# handles dropping everyone into the match so we can start fighting
+# so ts handles dropping everyone into the match so we can start fighting I think
 
 const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 
-## Default position where players spawn when no Marker2D spawn points are placed.
+## default spawn pos if you forgot to place marker2d points lol
 @export var default_spawn_position: Vector2 = Vector2(576, 300)
-## Optional list of spawn coordinates configured directly in the Inspector.
+## manual spawn coords if u prefer configuring it in inspector
 @export var spawn_positions: Array[Vector2] = []
-## If true, player respawns on death in tutorial (for multi-step challenges)
+## so the player respawns on death in tutorial for multi step stuff
 @export var respawn_on_death: bool = false
 
 var is_tutorial: bool = false
@@ -18,19 +18,29 @@ var is_tutorial: bool = false
 @onready var instructions_label: Label = get_node_or_null("HUD/InstructionsLabel")
 var player_scene: PackedScene = preload("res://Character/Player.tscn")
 
-const INSTRUCTIONS_HOLD_TIME: float = 4.0  # how long the controls prompt stays fully visible
-const INSTRUCTIONS_FADE_TIME: float = 1.0  # how long it takes to fade out after that
+const INSTRUCTIONS_HOLD_TIME: float = 4.0 # how long controls prompt stays fully visible I think
+const INSTRUCTIONS_FADE_TIME: float = 1.0 # how long it takes to fade out after that
+
+var is_round_over: bool = false
 
 func _ready() -> void:
 	is_tutorial = scene_file_path.ends_with("Tutorial.tscn")
+
+	# tag ourselves so MobileControls knows ts an actual gameplay scene n not
+	# just a menu or smth, thats how it decides whether to show the touch buttons at all
+	add_to_group("gameplay_scene")
+
 	spawn_players()
+
 	_show_move_instructions()
 	if void_zone:
 		void_zone.body_entered.connect(_on_void_zone_body_entered)
+	
+	# listens for when someone ragequits or loses connection
+	multiplayer.peer_disconnected.connect(_on_player_disconnected)
 
 func _show_move_instructions() -> void:
-	# quick "how to play" prompt for new players - shows on load, then fades
-	# itself out so it doesn't clutter the screen once you're moving around
+	# quick how to play text for new players so it fades out n doesnt clutter the screen
 	if not instructions_label:
 		return
 	instructions_label.modulate.a = 1.0
@@ -39,12 +49,12 @@ func _show_move_instructions() -> void:
 	tween.tween_property(instructions_label, "modulate:a", 0.0, INSTRUCTIONS_FADE_TIME)
 
 func _on_void_zone_body_entered(body: Node2D) -> void:
-	# anyone who falls into the void dies immediately, wherever they were
+	# so ts makes like whoever falls in the void just dies instantly wherever they were
 	if body.has_method("die"):
 		body.die()
 
 func get_spawn_position(index: int) -> Vector2:
-	# 1. Visual Marker2D / Node2D children under a "SpawnPoints" or "Spawns" node
+	# 1. tries grabbing marker2d nodes under spawnpoints or spawns
 	var spawns: Node = get_node_or_null("SpawnPoints")
 	if not spawns:
 		spawns = get_node_or_null("Spawns")
@@ -53,18 +63,18 @@ func get_spawn_position(index: int) -> Vector2:
 		if child is Node2D:
 			return child.global_position
 
-	# 2. Any node in the scene tagged with group "spawn_point"
+	# 2. checks for nodes tagged with spawn_point group
 	var group_spawns = get_tree().get_nodes_in_group("spawn_point")
 	if group_spawns.size() > 0:
 		var spawn_node = group_spawns[index % group_spawns.size()]
 		if spawn_node is Node2D:
 			return spawn_node.global_position
 
-	# 3. Direct inspector coordinate array
+	# 3. falls back to the inspector array
 	if spawn_positions.size() > 0:
 		return spawn_positions[index % spawn_positions.size()]
 
-	# 4. Fallback defaults (tutorial specific position if on tutorial, else default_spawn_position)
+	# 4. last resort fallback positions if literally everything else fails ngl
 	if scene_file_path == "res://Areas/Tutorial.tscn":
 		return Vector2(768, 509)
 	if NetworkManagerScript.players.size() > 0:
@@ -72,8 +82,7 @@ func get_spawn_position(index: int) -> Vector2:
 	return default_spawn_position
 
 func spawn_players() -> void:
-	# fresh match, fresh death corner - otherwise a rematch would keep stacking
-	# dead players further and further left/down from last game
+	# fresh match reset so dead bodies dont keep stacking up every rematch I think
 	var PlayerScript = preload("res://Areas/Player.gd")
 	PlayerScript.dead_count = 0
 
@@ -84,12 +93,12 @@ func spawn_players() -> void:
 			players_container.name = "Players"
 			add_child(players_container)
 
-	# clear whatever old balls were lying around
+	# clear out old player nodes lying around from last time
 	for child in players_container.get_children():
 		child.queue_free()
 
 	if NetworkManagerScript.players.size() > 0:
-		# spawn everyone from the lobby
+		# spawns everyone from the lobby if playing multi
 		var spawn_index: int = 0
 		for peer_id in NetworkManagerScript.players.keys():
 			var p_info = NetworkManagerScript.players[peer_id]
@@ -102,7 +111,7 @@ func spawn_players() -> void:
 			player.player_died.connect(_on_player_died)
 			spawn_index += 1
 	else:
-		# solo mode / testing without friends
+		# solo mode testing so the game doesnt crash when u run the scene directly
 		var player = player_scene.instantiate()
 		player.name = "1"
 		player.position = get_spawn_position(0)
@@ -120,8 +129,11 @@ func _on_player_died(_dead_player_id: int) -> void:
 			get_tree().change_scene_to_file("res://Menu/MainMenu.tscn")
 		return
 
-	# match mode: check surviving players to declare the winner and progress to next level
-	if is_round_over:
+	# checks whos still surviving to figure out the winner n go to next level
+	_check_match_end()
+
+func _check_match_end() -> void:
+	if is_round_over or is_tutorial:
 		return
 
 	var alive_players: Array = []
@@ -132,7 +144,7 @@ func _on_player_died(_dead_player_id: int) -> void:
 
 	var total_players: int = players_container.get_child_count() if players_container else 0
 
-	# When only 1 person remains alive (or if someone dies in solo testing)
+	# so ts checks if only 1 guy is left standing to trigger the win screen
 	if alive_players.size() == 1 and total_players > 1:
 		is_round_over = true
 		var winner = alive_players[0]
@@ -142,15 +154,13 @@ func _on_player_died(_dead_player_id: int) -> void:
 		is_round_over = true
 		_handle_round_won("NOBODY")
 
-var is_round_over: bool = false
-
 func _handle_round_won(winner_name: String) -> void:
 	_show_winner_banner(winner_name)
 	await get_tree().create_timer(2.2).timeout
 	advance_to_next_level()
 
 func advance_to_next_level() -> void:
-	# revives everybody for the next round
+	# revives everyone for the next round i think
 	var PlayerScript = preload("res://Areas/Player.gd")
 	PlayerScript.dead_count = 0
 	is_round_over = false
@@ -161,16 +171,21 @@ func advance_to_next_level() -> void:
 		network_mgr = NetworkManagerScript.instance
 
 	if network_mgr and NetworkManagerScript.is_host and NetworkManagerScript.is_in_room():
+		print("Host changing level to: ", next_path)
+		# tiny delay so the clients dont get desynced while it loads
+		await get_tree().create_timer(0.1).timeout
 		network_mgr.change_level(next_path)
 	else:
 		get_tree().change_scene_to_file(next_path)
 
 func get_next_level_path() -> String:
-	# cycles through Grass1 -> Grass2 -> Grass3 -> Grass1
+	# cycles the grass map rotation, grass1 -> grass2 -> grass3 -> grass4 -> back to grass1
 	if scene_file_path.ends_with("Grass1.tscn"):
 		return "res://Areas/Grass2.tscn"
 	elif scene_file_path.ends_with("Grass2.tscn"):
 		return "res://Areas/Grass3.tscn"
+	elif scene_file_path.ends_with("Grass3.tscn"):
+		return "res://Areas/Grass4.tscn"
 	else:
 		return "res://Areas/Grass1.tscn"
 
@@ -206,3 +221,18 @@ func _show_winner_banner(winner_name: String) -> void:
 
 	var tween := create_tween()
 	tween.tween_property(banner, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _on_player_disconnected(peer_id: int) -> void:
+	# removes the disconnected player node instantly so we dont get a ghost body stuck around
+	print("MatchManager: Player ", peer_id, " disconnected, removing from scene")
+	
+	# finds n frees the dc'd player node
+	for player in players_container.get_children():
+		if player.has_method("get") and player.get("player_id") == peer_id:
+			print("Removing player node: ", player.name)
+			player.queue_free()
+			break
+	
+	# so ts checks if someone bailing mid match means the remaining player just wins
+	await get_tree().create_timer(0.1).timeout
+	_check_match_end()

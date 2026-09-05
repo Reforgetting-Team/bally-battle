@@ -1,6 +1,7 @@
 extends Control
 
-# customization menu script - picks character color and updates the shader in real time
+# customization menu script, so ts is where u pick ur character color n it
+# updates the shader live so u see it change in real time, kinda satisfying
 
 const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 
@@ -11,12 +12,12 @@ const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 var mat: ShaderMaterial
 
 func _ready() -> void:
-	# CenterContainer holds both the ColorPicker and the Character, so animating
-	# it moves both together. Back stays put on entrance.
+	# CenterContainer holds both the ColorPicker n the Character so animating
+	# it moves both of em together. Back button stays put on entrance tho
 	UITransitions.animate_in(self, [back_button])
 
 	if character_sprite:
-		# make sure our shader material is unique so we dont accidentally color everything
+		# gotta make sure our shader material is unique so we dont accidentally recolor everything else too
 		if character_sprite.material is ShaderMaterial:
 			mat = character_sprite.material.duplicate() as ShaderMaterial
 			character_sprite.material = mat
@@ -26,7 +27,7 @@ func _ready() -> void:
 			mat.shader = shader
 			character_sprite.material = mat
 
-	# apply the saved color
+	# slap on whatever color they had saved last time
 	if mat:
 		mat.set_shader_parameter("skin_color", PlayerData.skin_color)
 
@@ -36,7 +37,7 @@ func _ready() -> void:
 			color_picker.color_changed.connect(_on_color_picker_color_changed)
 
 func _on_color_picker_color_changed(color: Color) -> void:
-	# update preview and save as you drag the color wheel
+	# update the preview n save it as u drag the color wheel around
 	if mat:
 		mat.set_shader_parameter("skin_color", color)
 	PlayerData.skin_color = color
@@ -46,7 +47,7 @@ func _on_color_picker_color_changed(color: Color) -> void:
 	if not network_mgr:
 		network_mgr = NetworkManagerScript.instance
 
-	# if were in a lobby while doing this, update our color for everyone in real time
+	# if were in a lobby while doin this, sync our color to everyone else live
 	if network_mgr and NetworkManagerScript.peer != null:
 		network_mgr.update_player_info(PlayerData.player_name, color)
 

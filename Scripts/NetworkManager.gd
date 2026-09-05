@@ -1,11 +1,11 @@
 extends Node
 
-# ts manages all the multiplayer p2p stuff and keeps everyone connected
+# ts manages all the multiplayer p2p stuff n keeps everyone connected
 
 const DEFAULT_PORT: int = 8910
 const DEFAULT_IP: String = "127.0.0.1"
 
-# holding the boys info so we know who is who and what color they picked
+# holding the boys info so we know who is who n what color they picked
 static var players: Dictionary = {}
 static var is_host: bool = false
 static var peer: ENetMultiplayerPeer = null
@@ -33,7 +33,8 @@ static func is_in_room() -> bool:
 	return peer != null
 
 static func can_start_match() -> bool:
-	# cant start if youre alone unless debug mode is active or someone is still messing with their colors/powers
+	# cant start if ur alone unless debug mode's on, or someone's still
+	# messing around with their colors/powers n not ready yet
 	if not is_host:
 		return false
 	if not PlayerData.debug_mode and players.size() < 2:
@@ -44,9 +45,9 @@ static func can_start_match() -> bool:
 	return true
 
 static func get_bindable_addresses() -> PackedStringArray:
-	# only real local interface addresses can be passed to set_bind_ip;
-	# anything else (a friend's IP, a router IP, an inactive ZeroTier
-	# adapter) fails with ERR_CANT_CREATE (20)
+	# only real local interface addresses can get passed to set_bind_ip,
+	# anything else (like a friend's IP, a router IP, an inactive ZeroTier
+	# adapter) just fails w ERR_CANT_CREATE (20) n confuses everyone
 	var result := PackedStringArray()
 	for addr in IP.get_local_addresses():
 		if not addr.is_empty():
@@ -54,7 +55,7 @@ static func get_bindable_addresses() -> PackedStringArray:
 	return result
 
 func create_game(bind_address: String = "", port: int = DEFAULT_PORT) -> Error:
-	# reset whatever was going on before and host a new room
+	# reset whatever was going on before n host a fresh new room
 	var clean_bind = bind_address.strip_edges()
 	if not clean_bind.is_empty() and not get_bindable_addresses().has(clean_bind):
 		push_error("%s is not one of this machine's local addresses: %s" % [clean_bind, get_bindable_addresses()])
@@ -74,7 +75,7 @@ func create_game(bind_address: String = "", port: int = DEFAULT_PORT) -> Error:
 	peer = host
 	multiplayer.multiplayer_peer = peer
 	is_host = true
-	# add host as player 1
+	# add the host in as player 1
 	players[1] = {
 		"name": PlayerData.player_name,
 		"color": PlayerData.skin_color,
@@ -86,7 +87,7 @@ func create_game(bind_address: String = "", port: int = DEFAULT_PORT) -> Error:
 	return OK
 
 func join_game(address: String = DEFAULT_IP, port: int = DEFAULT_PORT) -> Error:
-	# connect to your friends zerotier ip or localhost
+	# connect to ur friend's zerotier ip or just localhost for testing solo
 	leave_game()
 	var target_ip = address.strip_edges()
 	if target_ip.is_empty():
@@ -104,7 +105,7 @@ func join_game(address: String = DEFAULT_IP, port: int = DEFAULT_PORT) -> Error:
 	return OK
 
 func leave_game() -> void:
-	# nuke connection and clean up everything
+	# nuke the connection n clean up literally everything
 	if peer != null:
 		peer.close()
 		peer = null
@@ -115,10 +116,10 @@ func leave_game() -> void:
 	player_list_changed.emit()
 
 func update_player_info(new_name: String, new_color: Color, new_powers: Array = []) -> void:
-	# send our updated name/color/powers to the host so everyone sees it
+	# so ts sends our updated name/color/powers to the host so everyone else
+	# gets it syncronizated n sees the change too
 	if peer == null:
 		return
-	var my_id = multiplayer.get_unique_id() if not is_host else 1
 	if is_host:
 		if players.has(1):
 			players[1]["name"] = new_name
@@ -131,7 +132,7 @@ func update_player_info(new_name: String, new_color: Color, new_powers: Array = 
 		_update_player_info_rpc.rpc_id(1, new_name, new_color, new_powers)
 
 func set_player_ready(is_ready: bool) -> void:
-	# tell host if we are chilling in lobby or customizing our ball
+	# tell the host whether were just chillin in lobby or off customizing our ball rn
 	if peer == null:
 		return
 	if is_host:
@@ -144,7 +145,7 @@ func set_player_ready(is_ready: bool) -> void:
 
 @rpc("any_peer", "reliable")
 func _update_player_info_rpc(new_name: String, new_color: Color, new_powers: Array = []) -> void:
-	# host receives updated info from a client and shares it with the class
+	# host gets the updated info from a client n fans it back out to the whole class
 	if not is_host:
 		return
 	var sender_id = multiplayer.get_remote_sender_id()
@@ -167,7 +168,7 @@ func _set_player_ready_rpc(is_ready: bool) -> void:
 		player_list_changed.emit()
 
 func _on_connected_to_server() -> void:
-	# we joined! tell the host who we are
+	# we in! tell the host who we are so it can add us to the roster
 	var my_id = multiplayer.get_unique_id()
 	print("Connected to server! Local peer ID: ", my_id)
 	var my_info = {
@@ -202,7 +203,7 @@ func _on_peer_disconnected(id: int) -> void:
 
 @rpc("any_peer", "reliable")
 func _register_player(info: Dictionary) -> void:
-	# host registers newcomer and blasts player list to everyone
+	# host registers the newcomer n blasts the updated player list out to everybody
 	if not is_host:
 		return
 	var sender_id = multiplayer.get_remote_sender_id()
@@ -213,7 +214,7 @@ func _register_player(info: Dictionary) -> void:
 
 @rpc("authority", "reliable")
 func _sync_players(updated_players: Dictionary) -> void:
-	# client receives latest player roster
+	# so ts is where the client actually receives the latest syncronizated player roster
 	players = updated_players
 	player_list_changed.emit()
 
@@ -225,13 +226,14 @@ func start_game(scene_path: String = "res://Areas/Grass1.tscn") -> void:
 	_load_match_scene.rpc(scene_path)
 
 func change_level(scene_path: String) -> void:
-	# transitions all connected players to the next level between rounds
+	# transitions everybody connected over to the next level in between rounds
 	if not is_host:
 		return
 	_load_match_scene.rpc(scene_path)
 
 @rpc("authority", "call_local", "reliable")
 func _load_match_scene(scene_path: String) -> void:
-	# tell everyone in the lobby to load into the arena
+	# tell everyone in the lobby to load into the arena at the same time
+	print("Loading scene: ", scene_path, " (is_host: ", is_host, ", peer_id: ", multiplayer.get_unique_id(), ")")
 	match_started.emit()
 	get_tree().change_scene_to_file(scene_path)

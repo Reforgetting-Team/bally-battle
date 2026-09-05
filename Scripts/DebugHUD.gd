@@ -1,13 +1,13 @@
 extends CanvasLayer
 
-# ts is the advanced debug overlay that shows all the nerd stats when debug mode is on
-# toggles with F3 or via Settings
+# ts is the fancy debug overlay that shows all the nerd stats when debug mode's on
+# toggles with F3 or thru Settings, whichever u feel like
 
 var overlay_panel: PanelContainer
 var info_label: Label
 
 func _ready() -> void:
-	layer = 120 # above all gameplay and UI
+	layer = 120 # sits above literally everything else, gameplay n ui both
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_create_ui()
 
@@ -47,7 +47,7 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif PlayerData.debug_mode:
 			if event.keycode == KEY_F1:
-				# suicide test key to test death & victory
+				# suicide test key so we can quickly test death n the victory flow
 				var players = get_tree().get_nodes_in_group("player")
 				for p in players:
 					if "is_local_player" in p and p.is_local_player and p.has_method("die"):
@@ -55,7 +55,7 @@ func _input(event: InputEvent) -> void:
 						break
 				get_viewport().set_input_as_handled()
 			elif event.keycode == KEY_F2:
-				# quick skip to next match level
+				# quick skip straight to the next match level, saves so much time testing
 				var match_mgr = get_tree().current_scene
 				if match_mgr and match_mgr.has_method("advance_to_next_level"):
 					match_mgr.advance_to_next_level()
@@ -79,7 +79,7 @@ func _process(_delta: float) -> void:
 	if get_tree().current_scene:
 		scene_name = get_tree().current_scene.scene_file_path.get_file()
 
-	# find local player stats
+	# go find the local player's stats to display
 	var pos_str := "N/A"
 	var vel_str := "N/A"
 	var state_str := "Normal"
@@ -96,7 +96,7 @@ func _process(_delta: float) -> void:
 				state_str = "DASHING"
 			break
 
-	# network stats
+	# network stats, whether were solo host or client n how many peers
 	var net_status := "Solo"
 	var peer_count := 0
 	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:

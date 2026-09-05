@@ -12,20 +12,20 @@ var is_active: bool = false
 var history: Array = []
 var fade_tween: Tween = null
 
-# keep points alive long enough so the trail doesn't just vanish mid dash
+# keep points alive long enough so the trail doesnt just vanish mid dash
 const MAX_POINTS: int = 45
 const POINT_LIFETIME: float = 0.35
 const SPACING: float = 16.0 # how far apart the three lines chill from each other
 
 func _ready() -> void:
-	# draw in world space so curves don't spin with the ball
+	# draw in world space so the curves dont spin around with the ball
 	top_level = true
-	# z_index 1 puts it in front of ground tiles (z=0) and behind ball sprite (z=2)
+	# z_index 1 puts it in front of ground tiles (z=0) n behind the ball sprite (z=2)
 	z_index = 1
 	_setup_lines()
 
 func _setup_lines() -> void:
-	# style the lines with that clean anime speed vibe
+	# style the lines w that clean anime speed lines vibe
 	var lines = [line_top, line_mid, line_bot]
 	for line in lines:
 		if not line:
@@ -37,7 +37,7 @@ func _setup_lines() -> void:
 		line.joint_mode = Line2D.LINE_JOINT_ROUND
 		line.default_color = Color(1.0, 1.0, 1.0, 0.75)
 		
-		# start of line (the tail) fades in smoothly from 0 to 75% opacity
+		# start of the line (the tail) fades in smooth from 0 to 75% opacity
 		var grad := Gradient.new()
 		grad.set_color(0, Color(1.0, 1.0, 1.0, 0.0))
 		grad.set_offset(0, 0.0)
@@ -55,7 +55,7 @@ func start_trail(target: CharacterBody2D) -> void:
 
 func stop_trail() -> void:
 	is_active = false
-	# fade out smoothly so it doesn't just snap out of existence
+	# fade it out smooth so it doesnt just snap out of existence lol
 	if fade_tween and fade_tween.is_valid():
 		fade_tween.kill()
 	fade_tween = create_tween()
@@ -72,7 +72,7 @@ func stop_trail() -> void:
 func _physics_process(_delta: float) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 
-	# record positions while dashing so the lines follow your sick curves
+	# record positions while dashing so the lines follow ur sick curves
 	if is_active and is_instance_valid(target_node):
 		var pos = target_node.global_position
 		var vel = target_node.velocity
@@ -82,7 +82,7 @@ func _physics_process(_delta: float) -> void:
 			if normal.y > 0.0:
 				normal = -normal
 
-		# push a new point when we move
+		# push a new point when we actually move
 		if history.is_empty() or history[0].pos.distance_squared_to(pos) > 16.0:
 			history.push_front({
 				"pos": pos,
@@ -90,12 +90,12 @@ func _physics_process(_delta: float) -> void:
 				"time": now
 			})
 		else:
-			# smoothly update current head point so the trail stays glued to the ball
+			# smoothly update the current head point so the trail stays glued to the ball
 			history[0].pos = pos
 			history[0].normal = normal
 			history[0].time = now
 
-	# prune old points that lived their best life
+	# prune old points that already lived their best life
 	while not history.is_empty() and (now - history.back().time > POINT_LIFETIME or history.size() > MAX_POINTS):
 		history.pop_back()
 
@@ -109,7 +109,7 @@ func _physics_process(_delta: float) -> void:
 
 	visible = true
 
-	# stagger the line lengths a bit so it looks like actual wind
+	# stagger the line lengths a lil bit so it actually looks like wind n not just lines
 	var mid_count = history.size()
 	var top_count = max(2, int(mid_count * 0.88))
 	var bot_count = max(2, int(mid_count * 0.94))

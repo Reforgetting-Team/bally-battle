@@ -6,15 +6,15 @@
 [ext_resource type="Texture2D" uid="uid://cx6u00n3xjryx" path="res://Areas/LeftBottomCloud.png" id="4_4sxna"]
 [ext_resource type="Texture2D" uid="uid://bmad0uiekxs75" path="res://Areas/RightBottomCloud.png" id="5_efqq7"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_nukdl"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_xpol8"]
 atlas = ExtResource("3_xpol8")
 region = Rect2(285, 959, 1243, 121)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_tngbh"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_4sxna"]
 atlas = ExtResource("4_4sxna")
 region = Rect2(0, 747, 342, 333)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_jp5b5"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_efqq7"]
 atlas = ExtResource("5_efqq7")
 region = Rect2(1493, 804, 427, 276)
 
@@ -35,14 +35,14 @@ offset_left = 207.02269
 offset_top = 388.03983
 offset_right = 709.9773
 offset_bottom = 437.0
-texture = SubResource("AtlasTexture_nukdl")
+texture = SubResource("AtlasTexture_xpol8")
 expand_mode = 1
 
 [node name="LeftBottomCloudRect" type="TextureRect" parent="." unique_id=1240295579]
 offset_top = 302.25833
 offset_right = 138.38333
 offset_bottom = 437.0
-texture = SubResource("AtlasTexture_tngbh")
+texture = SubResource("AtlasTexture_4sxna")
 expand_mode = 1
 
 [node name="RightBottomCloudRect" type="TextureRect" parent="." unique_id=1669819706]
@@ -50,7 +50,7 @@ offset_left = 744.22314
 offset_top = 325.32224
 offset_right = 917.0
 offset_bottom = 437.0
-texture = SubResource("AtlasTexture_jp5b5")
+texture = SubResource("AtlasTexture_efqq7")
 expand_mode = 1
 
 [node name="TopCloudsContainer" type="Control" parent="." unique_id=278507902]

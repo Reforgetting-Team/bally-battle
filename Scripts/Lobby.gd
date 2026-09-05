@@ -1,6 +1,6 @@
 extends Control
 
-# lobby screen controller - deals with buttons and room UI and player lists
+# lobby screen controller, deals w all the buttons n room ui n the player list
 
 const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 const RecolorShader = preload("res://Character/recolor.gdshader")
@@ -51,7 +51,7 @@ func _ready() -> void:
 		back_button.pressed.connect(_on_back_pressed)
 	name_input.text_changed.connect(_on_name_changed)
 
-	# came back from customization while in a room? cool, tell everyone we are back
+	# came back from customization while still in a room? cool, tell everyone we back
 	if NetworkManagerScript.peer != null:
 		if network_mgr:
 			network_mgr.set_player_ready(true)
@@ -68,12 +68,13 @@ func _on_name_changed(new_name: String) -> void:
 	PlayerData.player_name = clean_name
 	PlayerData.save_data()
 
-	# sync the new tag to everyone if we are already chilling in a room
+	# so ts makes the new name tag get syncronizated out to everyone else if
+	# were already chillin in a room, otherwise its just a local change for now
 	if network_mgr and NetworkManagerScript.peer != null:
 		network_mgr.update_player_info(clean_name, PlayerData.skin_color)
 
 func _update_ui_state(in_room: bool) -> void:
-	# swap between the join/host buttons and the actual lobby room
+	# swap between the join/host buttons n the actual lobby room view
 	connection_panel.visible = not in_room
 	room_panel.visible = in_room
 	start_button.visible = in_room and NetworkManagerScript.is_host
@@ -100,8 +101,8 @@ func _on_host_pressed() -> void:
 		var bind_ip = host_ip_input.text.strip_edges()
 		var port = int(host_port_input.text) if host_port_input.text.is_valid_int() else NetworkManagerScript.DEFAULT_PORT
 
-		# catch the bad-address case before we even try, with a helpful message,
-		# instead of a bare "error 20"
+		# catch the bad address case before we even try, w a helpful message,
+		# instead of just throwing a bare "error 20" at the player lol
 		if not bind_ip.is_empty() and not NetworkManagerScript.get_bindable_addresses().has(bind_ip):
 			status_label.text = "Can't bind to %s. This PC's addresses: %s" % [bind_ip, ", ".join(NetworkManagerScript.get_bindable_addresses())]
 			return
@@ -153,7 +154,8 @@ func _on_server_disconnected() -> void:
 	status_label.text = "Host disconnected."
 
 func _on_player_list_changed() -> void:
-	# rebuild the player list UI whenever someone joins leaves or changes color
+	# rebuild the whole player list ui whenever someone joins leaves or changes color,
+	# easier than trying to diff it n way less bug prone tbh
 	for child in player_list_container.get_children():
 		child.queue_free()
 
@@ -166,7 +168,7 @@ func _on_player_list_changed() -> void:
 		hbox.add_theme_constant_override("separation", 16)
 		hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-		# show their cute ball sprite with their customized color shader applied
+		# show their cute lil ball sprite w their own customized color shader applied
 		var char_icon = TextureRect.new()
 		char_icon.custom_minimum_size = Vector2(36, 36)
 		char_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -180,7 +182,7 @@ func _on_player_list_changed() -> void:
 
 		hbox.add_child(char_icon)
 
-		# player name and badges like host / you / customizing
+		# player name n badges like host / you / customizing
 		var name_lbl = Label.new()
 		var p_name = p_info.get("name", "Player")
 		var is_ready = p_info.get("ready", true)
@@ -207,7 +209,7 @@ func _on_player_list_changed() -> void:
 
 		player_list_container.add_child(hbox)
 
-	# dont let the host start if alone or someone is still in customization (unless in debug mode)
+	# dont let the host start if theyre alone or someone's still customizing (unless debug mode's on)
 	if NetworkManagerScript.is_host:
 		if not PlayerData.debug_mode and NetworkManagerScript.players.size() < 2:
 			start_button.disabled = true
@@ -234,14 +236,14 @@ func _on_start_pressed() -> void:
 			status_label.text = "Cannot start match while players are customizing."
 
 func _on_leave_pressed() -> void:
-	# rage quit the room
+	# rage quit the room lol
 	if network_mgr:
 		network_mgr.leave_game()
 	_update_ui_state(false)
 	status_label.text = "Left lobby."
 
 func _on_back_pressed() -> void:
-	# go back to customize without leaving room and tell host to wait up
+	# go back to customize without actually leaving the room, n tell the host to wait up for us
 	back_button.disabled = true
 	if network_mgr and NetworkManagerScript.peer != null:
 		network_mgr.set_player_ready(false)

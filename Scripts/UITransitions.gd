@@ -1,10 +1,10 @@
 extends RefCounted
 class_name UITransitions
 
-# Shared "bouncy menu" transition used across all menu screens:
-# entrance = start below the screen, overshoot up past resting spot, settle down.
-# exit = quick overshoot up, then slide all the way down off the bottom of the screen.
-# (menu button polish)
+# shared "bouncy menu" transition used across literally all the menu screens:
+# entrance = starts below the screen, overshoots up past its resting spot, then settles down
+# exit = quick overshoot up, then slides all the way down off the bottom of the screen
+# (basically just menu button polish so it doesnt feel stiff)
 
 const OVERSHOOT_PX := 18.0
 const ANTICIPATION_TIME := 0.12
@@ -14,8 +14,9 @@ const EXIT_SLIDE_TIME := 0.3
 const FADE_IN_TIME := 0.6
 
 
+
 static func fade_node_in(node: CanvasItem, duration: float = FADE_IN_TIME) -> void:
-	# slow fade-in, no movement at all - used for the Back button
+	# slow fade in, no movement at all, used for the Back button specifically
 	node.modulate.a = 0.0
 	var tween: Tween = node.create_tween()
 	tween.tween_property(node, "modulate:a", 1.0, duration)\
@@ -23,8 +24,8 @@ static func fade_node_in(node: CanvasItem, duration: float = FADE_IN_TIME) -> vo
 
 
 static func animate_node_out_up(node: Control, on_complete: Callable) -> void:
-	# mirror of animate_node_out but exits off the TOP of the screen instead
-	# of the bottom - used for the Back button, which goes against the grain
+	# mirror of animate_node_out but exits off the TOP of the screen instead of
+	# the bottom, used for the Back button which just goes against the grain lol
 	var start_y: float = node.position.y
 	var offscreen_offset: float = node.get_viewport_rect().size.y
 
@@ -38,17 +39,17 @@ static func animate_node_out_up(node: Control, on_complete: Callable) -> void:
 
 
 static func animate_in(root: Node, exclude: Array = []) -> void:
-	# animates every direct Control child of root (except anything in exclude)
+	# animates every direct Control child of root (except whatever's in exclude)
 	animate_in_nodes(_collect_children(root, exclude))
 
 
 static func animate_out(root: Node, on_complete: Callable, exclude: Array = []) -> void:
-	# same, but for leaving a screen
+	# same deal but for leaving a screen instead
 	animate_out_nodes(_collect_children(root, exclude), on_complete)
 
 
 static func animate_node_in(node: Control) -> void:
-	# convenience for a single control (e.g. a standalone button)
+	# convenience version for just a single control (like a standalone button)
 	animate_in_nodes([node])
 
 

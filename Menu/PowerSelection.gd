@@ -1,8 +1,8 @@
 extends Control
 
-# Power / Ability Selection Menu
-# Allows selecting up to 3 powers (Dash & Spiky!)
-# Visually displays the PowerChooser panel with ball containers for each slot
+# power/ability selection menu, so ts is where u pick ur loadout basically
+# lets u equip up to 3 powers (dash n spiky, more later maybe idk)
+# just shows the PowerChooser panel w a lil ball container for each slot
 
 const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 const PowerBallTexture = preload("res://Menu/PowerBall.png")
@@ -67,7 +67,7 @@ func _update_equipped_ui() -> void:
 	var is_dash_equipped: bool = PlayerData.equipped_powers.has("dash")
 	var is_spiky_equipped: bool = PlayerData.equipped_powers.has("spiky")
 
-	# Slot 1 (Dash) visuals
+	# slot 1 (dash) visuals
 	if is_dash_equipped:
 		slot_1_ball.modulate.a = 1.0
 		slot_1_icon.modulate.a = 1.0
@@ -75,7 +75,7 @@ func _update_equipped_ui() -> void:
 		slot_1_ball.modulate.a = 0.55
 		slot_1_icon.modulate.a = 0.4
 
-	# Slot 2 (Spiky) visuals
+	# slot 2 (spiky) visuals
 	if is_spiky_equipped:
 		slot_2_ball.modulate.a = 1.0
 		if slot_2_icon:
@@ -94,7 +94,7 @@ func _update_equipped_ui() -> void:
 	if count_label:
 		count_label.text = "EQUIPPED: %d / 3" % PlayerData.equipped_powers.size()
 
-	# Details panel for the selected power
+	# details panel for whatever power is currently selected
 	var is_selected_equipped: bool = PlayerData.equipped_powers.has(selected_power)
 	if equip_btn:
 		equip_btn.text = "EQUIPPED" if is_selected_equipped else "EQUIP"

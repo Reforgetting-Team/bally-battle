@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://8nw3qgd8r16k" path="res://Character/Character.png" id="2_tex"]
 [ext_resource type="AudioStream" uid="uid://dwo74uitcxbgn" path="res://Sounds/Pop.ogg" id="3_jump"]
 [ext_resource type="AudioStream" uid="uid://vb33qcgauhou" path="res://Sounds/Death.ogg" id="5_dvofn"]
+[ext_resource type="AudioStream" path="res://Sounds/Spawn.ogg" id="6_spawn"]
 [ext_resource type="Shader" path="res://Character/wind_trail.gdshader" id="6_wind_shader"]
 [ext_resource type="Script" path="res://Character/WindTrail.gd" id="7_wind_trail"]
 [ext_resource type="Script" path="res://Character/SpikesVisual.gd" id="8_spikes_script"]
@@ -63,6 +64,9 @@ stream = ExtResource("3_jump")
 
 [node name="DeathAudio" type="AudioStreamPlayer" parent="." unique_id=2017300745]
 stream = ExtResource("5_dvofn")
+
+[node name="SpawnAudio" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_spawn")
 
 [node name="DashAudio" type="AudioStreamPlayer" parent="." unique_id=1204723780]
 stream = ExtResource("3_jump")

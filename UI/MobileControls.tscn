@@ -1,0 +1,129 @@
+[gd_scene format=3 uid="uid://qvdolurrp3yg"]
+
+[ext_resource type="Script" uid="uid://dfbfugq68qfhd" path="res://UI/MobileControls.gd" id="1_lmjhb"]
+[ext_resource type="Texture2D" uid="uid://cr6fhnf3pteow" path="res://Menu/Dash.png" id="2_dash"]
+[ext_resource type="Texture2D" uid="uid://c161i22qt0n2l" path="res://Menu/Spiky.png" id="3_spiky"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jump"]
+size = Vector2(80, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_dash"]
+size = Vector2(80, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_spiky"]
+size = Vector2(80, 80)
+
+[node name="MobileControls" type="CanvasLayer" unique_id=1230964580]
+script = ExtResource("1_lmjhb")
+
+[node name="JoystickBase" type="Control" parent="." unique_id=2080459622]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 3
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 130.0
+offset_top = -160.0
+offset_right = 250.0
+offset_bottom = -40.0
+grow_vertical = 2
+
+[node name="Background" type="Panel" parent="JoystickBase" unique_id=1568736600]
+modulate = Color(1, 1, 1, 0.4)
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Knob" type="Control" parent="JoystickBase" unique_id=518631906]
+custom_minimum_size = Vector2(50, 50)
+anchors_preset = 0
+offset_left = 35.0
+offset_top = 35.0
+offset_right = 35.0
+offset_bottom = 35.0
+
+[node name="KnobPanel" type="Panel" parent="JoystickBase/Knob" unique_id=1129408512]
+modulate = Color(1, 1, 1, 0.7)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="JumpButton" type="TouchScreenButton" parent="." unique_id=734518229]
+position = Vector2(880, 453)
+shape = SubResource("RectangleShape2D_jump")
+action = "jump"
+visibility_mode = 1
+
+[node name="Visual" type="ColorRect" parent="JumpButton" unique_id=1836238651]
+modulate = Color(1, 1, 1, 0.7)
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(0.2, 0.8, 0.2, 0.7)
+
+[node name="Label" type="Label" parent="JumpButton/Visual" unique_id=1563318467]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+theme_override_font_sizes/font_size = 48
+text = "↑"
+horizontal_alignment = 1
+
+[node name="DashButton" type="TouchScreenButton" parent="." unique_id=2018647294]
+position = Vector2(880, 353)
+shape = SubResource("RectangleShape2D_dash")
+action = "dash"
+visibility_mode = 1
+
+[node name="Visual" type="ColorRect" parent="DashButton" unique_id=1762720384]
+modulate = Color(1, 1, 1, 0.7)
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(0.8, 0.5, 0.2, 0.7)
+
+[node name="Icon" type="TextureRect" parent="DashButton/Visual" unique_id=1795415924]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 7.0
+offset_right = 72.0
+offset_bottom = 71.0
+texture = ExtResource("2_dash")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SpikyButton" type="TouchScreenButton" parent="." unique_id=2140610289]
+position = Vector2(780, 403)
+shape = SubResource("RectangleShape2D_spiky")
+action = "spiky"
+visibility_mode = 1
+
+[node name="Visual" type="ColorRect" parent="SpikyButton" unique_id=491170732]
+modulate = Color(1, 1, 1, 0.7)
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(0.9, 0.2, 0.2, 0.7)
+
+[node name="Icon" type="TextureRect" parent="SpikyButton/Visual" unique_id=1473393442]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 32.0
+offset_bottom = 32.0
+texture = ExtResource("3_spiky")
+expand_mode = 1
+stretch_mode = 5
+metadata/_edit_use_anchors_ = true
