@@ -99,7 +99,7 @@ func _process(_delta: float) -> void:
 	# network stats, whether were solo host or client n how many peers
 	var net_status := "Solo"
 	var peer_count := 0
-	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		var is_host = multiplayer.is_server()
 		net_status = "Host" if is_host else "Client"
 		peer_count = multiplayer.get_peers().size() + 1

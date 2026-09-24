@@ -3,7 +3,7 @@ extends CanvasLayer
 
 # global persistent background system, so ts basically handles:
 # - autoloaded as "Background" so the clouds NEVER reset when u switch between menus or maps
-# - 16:9 res: shows the og full background illustration w drifting top clouds
+# - 16:9 res: tiles the blue sky underneath the see-through menu art n drifting clouds
 # - ultrawide / non 16:9: tiles the Background.png, centers Terrain, pins the corner
 #   clouds n keeps the drifting top clouds going too
 
@@ -33,12 +33,29 @@ var right_cloud_atlas: AtlasTexture
 
 var _cloud_scroll_x: float = 0.0
 var _active_cloud_nodes: Array[TextureRect] = []
+var composite_foreground: TextureRect
 
 func _ready() -> void:
 	layer = -100 # always render behind literally everything, menus ui tiles players all of it
 	_setup_textures()
+	_create_composite_foreground()
 	_update_layout()
 	get_viewport().size_changed.connect(_update_layout)
+
+func _create_composite_foreground() -> void:
+	if not bg_rect:
+		return
+
+	# Menu/Background.png is only the see-through foreground art, so give it
+	# the tiled sky underneath instead of letting the gray clear color show thru
+	composite_foreground = TextureRect.new()
+	composite_foreground.name = "CompositeForeground"
+	composite_foreground.texture = composite_bg_texture
+	composite_foreground.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	composite_foreground.stretch_mode = TextureRect.STRETCH_SCALE
+	composite_foreground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(composite_foreground)
+	move_child(composite_foreground, bg_rect.get_index() + 1)
 
 func _setup_textures() -> void:
 	clouds_atlas = AtlasTexture.new()
@@ -100,13 +117,20 @@ func _update_layout() -> void:
 	var design_w_scaled: float = DESIGN_WIDTH * scale_factor
 	var is_standard_16_9: bool = vp_size.x <= design_w_scaled + 2.0
 
+	# the 1920x1080 menu art has transparent sky, keep the checker sky behind it
+	if bg_rect:
+		bg_rect.texture = tiled_bg_texture
+		bg_rect.stretch_mode = TextureRect.STRETCH_TILE
+		bg_rect.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		bg_rect.position = Vector2.ZERO
+		bg_rect.size = vp_size
+
 	if is_standard_16_9:
-		# standard 16:9, just use the og full illustration (Menu/Background.png)
-		if bg_rect:
-			bg_rect.texture = composite_bg_texture
-			bg_rect.stretch_mode = TextureRect.STRETCH_SCALE
-			bg_rect.size = Vector2(design_w_scaled, vp_size.y)
-			bg_rect.position = Vector2((vp_size.x - design_w_scaled) * 0.5, 0.0)
+		# keep the transparent bottom art centered over the tiled sky
+		if composite_foreground:
+			composite_foreground.visible = true
+			composite_foreground.size = Vector2(design_w_scaled, vp_size.y)
+			composite_foreground.position = Vector2((vp_size.x - design_w_scaled) * 0.5, 0.0)
 
 		# hide the individual pieces since theyre already baked into the 16:9 composite art
 		if terrain_rect:
@@ -117,12 +141,8 @@ func _update_layout() -> void:
 			right_cloud_rect.visible = false
 	else:
 		# ultrawide (>16:9), gotta tile the bg n anchor separate corner clouds n terrain
-		if bg_rect:
-			bg_rect.texture = tiled_bg_texture
-			bg_rect.stretch_mode = TextureRect.STRETCH_TILE
-			bg_rect.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-			bg_rect.size = vp_size
-			bg_rect.position = Vector2.ZERO
+		if composite_foreground:
+			composite_foreground.visible = false
 
 		if terrain_rect and terrain_atlas:
 			terrain_rect.visible = true

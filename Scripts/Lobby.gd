@@ -17,6 +17,7 @@ const CharacterTexture = preload("res://Character/Character.png")
 @onready var connection_panel: VBoxContainer = %ConnectionPanel
 @onready var host_ip_input: LineEdit = %HostIPInput
 @onready var host_port_input: LineEdit = %HostPortInput
+@onready var lan_room_list: VBoxContainer = %LANRoomList
 @onready var room_panel: VBoxContainer = %RoomPanel
 @onready var player_list_container: VBoxContainer = %PlayerListContainer
 
@@ -42,6 +43,9 @@ func _ready() -> void:
 			network_mgr.connection_failed.connect(_on_connection_failed)
 		if not network_mgr.server_disconnected.is_connected(_on_server_disconnected):
 			network_mgr.server_disconnected.connect(_on_server_disconnected)
+		if not network_mgr.lan_rooms_changed.is_connected(_on_lan_rooms_changed):
+			network_mgr.lan_rooms_changed.connect(_on_lan_rooms_changed)
+		_on_lan_rooms_changed()
 
 	host_button.pressed.connect(_on_host_pressed)
 	join_button.pressed.connect(_on_join_pressed)
@@ -115,17 +119,23 @@ func _on_host_pressed() -> void:
 			status_label.text = "Failed to host match: error %d" % err
 
 func _on_join_pressed() -> void:
+	var ip = ip_input.text.strip_edges()
+	if ip.is_empty():
+		ip = "127.0.0.1"
+	_join_room(ip, NetworkManagerScript.DEFAULT_PORT)
+
+func _on_lan_room_pressed(address: String, port: int) -> void:
+	ip_input.text = address
+	_join_room(address, port)
+
+func _join_room(ip: String, port: int) -> void:
 	PlayerData.player_name = name_input.text.strip_edges()
 	if PlayerData.player_name.is_empty():
 		PlayerData.player_name = "Player 2"
 	PlayerData.save_data()
 
-	var ip = ip_input.text.strip_edges()
-	if ip.is_empty():
-		ip = "127.0.0.1"
-
 	status_label.text = "Connecting to %s..." % ip
-	join_button.disabled = true
+	_set_join_buttons_disabled(true)
 
 	if not network_mgr:
 		network_mgr = get_node_or_null("/root/NetworkManager")
@@ -133,23 +143,63 @@ func _on_join_pressed() -> void:
 			network_mgr = NetworkManagerScript.instance
 
 	if network_mgr:
-		var err = network_mgr.join_game(ip)
+		var err = network_mgr.join_game(ip, port)
 		if err != OK:
 			status_label.text = "Failed to connect: error %d" % err
-			join_button.disabled = false
+			_set_join_buttons_disabled(false)
+	else:
+		status_label.text = "Network manager is unavailable."
+		_set_join_buttons_disabled(false)
+
+func _on_lan_rooms_changed() -> void:
+	for child in lan_room_list.get_children():
+		child.queue_free()
+
+	if not network_mgr or not network_mgr.has_method("get_lan_rooms"):
+		return
+	var rooms = network_mgr.call("get_lan_rooms")
+	if rooms.is_empty():
+		var searching_label := Label.new()
+		searching_label.text = "Looking for nearby hosts..."
+		searching_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		searching_label.add_theme_font_size_override("font_size", 15)
+		searching_label.modulate.a = 0.75
+		lan_room_list.add_child(searching_label)
+		return
+
+	for room in rooms:
+		var address: String = str(room.get("ip", ""))
+		var port: int = int(room.get("port", NetworkManagerScript.DEFAULT_PORT))
+		var room_name: String = str(room.get("name", "Player"))
+		var player_count: int = int(room.get("players", 1))
+		var capacity: int = int(room.get("capacity", 32))
+		var room_button := Button.new()
+		room_button.custom_minimum_size = Vector2(0, 42)
+		room_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		room_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		room_button.text = "%s  •  %d/%d players  (%s:%d)" % [room_name, player_count, capacity, address, port]
+		room_button.disabled = join_button.disabled
+		room_button.pressed.connect(_on_lan_room_pressed.bind(address, port))
+		lan_room_list.add_child(room_button)
+
+func _set_join_buttons_disabled(is_disabled: bool) -> void:
+	join_button.disabled = is_disabled
+	for child in lan_room_list.get_children():
+		if child is BaseButton:
+			child.disabled = is_disabled
 
 func _on_connection_succeeded() -> void:
-	join_button.disabled = false
+	_set_join_buttons_disabled(false)
 	_update_ui_state(true)
 	_on_player_list_changed()
 
 func _on_connection_failed() -> void:
-	join_button.disabled = false
+	_set_join_buttons_disabled(false)
 	_update_ui_state(false)
 	status_label.text = "Connection failed. Please check IP address and ensure host is running."
 
 func _on_server_disconnected() -> void:
-	join_button.disabled = false
+	_set_join_buttons_disabled(false)
 	_update_ui_state(false)
 	status_label.text = "Host disconnected."
 

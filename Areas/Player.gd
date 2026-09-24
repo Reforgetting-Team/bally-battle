@@ -2,6 +2,8 @@ extends CharacterBody2D
 
 # so ts is the player ball script, got all the juicy physics in here, rolling bouncing n controls n stuff
 
+const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
+
 @export var speed: float = 380.0
 @export var acceleration: float = 900.0
 @export var friction: float = 400.0
@@ -44,7 +46,7 @@ var equipped_powers: Array = ["dash"]
 var is_dashing: bool = false
 var dash_cooldown_timer: float = 0.0
 var dash_time_remaining: float = 0.0
-const DASH_COOLDOWN: float = 1.2
+const DASH_COOLDOWN: float = 2.0 # every power shares the same 2s cooldown now, keeps it fair across the board
 const DASH_DURATION: float = 0.22 # this gives it that nice beefy burst duration ngl
 const DASH_SPEED: float = 950.0
 var dash_direction: float = 1.0
@@ -55,30 +57,41 @@ var is_spiky: bool = false
 var spiky_time_remaining: float = 0.0
 var spiky_cooldown_timer: float = 0.0
 const SPIKY_DURATION: float = 3.5
-const SPIKY_COOLDOWN: float = 4.5
+const SPIKY_COOLDOWN: float = 2.0
+
+# bomb power, pull it out, chuck it n run, or get greedy n hold it too long lmao.
+# sprite lives at res://Menu/Bomb.png, loaded at runtime (not preloaded) so the
+# project doesnt refuse to boot if that art hasnt actually been dropped in yet
+var is_holding_bomb: bool = false
+var bomb_hold_timer: float = 0.0
+var bomb_startup_frames_remaining: int = 0
+var bomb_cooldown_timer: float = 0.0
+var _bomb_hold_sprite: Sprite2D = null
+var bomb_aim_dir: Vector2 = Vector2.RIGHT # which way ur currently pointing the bomb, follows the mouse
+const BOMB_FUSE_TIME: float = 3.5       # same long cook window as bopl so u can line up a real trick shot
+const BOMB_COOLDOWN: float = 2.0
+const BOMB_STARTUP_FRAMES: int = 14     # ~0.2s @ 60fps, the windup before u can actually chuck it
+const BOMB_THROW_FORCE: float = 520.0   # actual chuck speed now, not a lazy drop
+const BOMB_EXPLOSION_RADIUS: float = 90.0
+const BOMB_HOLD_SCALE: float = 0.17     # bomb art is 256x256, this gets it down to roughly half the ball's size
+const BOMB_HOLD_RADIUS: float = 44.0    # how far from the ball's center the held bomb sits, orbits around this
+const BOMB_SPAWN_DISTANCE: float = 62.0
+const BombScene: PackedScene = preload("res://Character/Bomb.tscn")
+var _bomb_sequence: int = 0
 
 var is_local_player: bool = true
 var shader_mat: ShaderMaterial
 var sprite_base_scale: Vector2 = Vector2.ONE
 
-# --- remote player netcode state (only ever used when !is_local_player) ---
-# _sync_transform arrives over an UNRELIABLE rpc, so packets can get dropped
-# or arrive late. snapping straight to the latest position every time we get
-# one reads as jittery teleporting whenever theres any packet loss. instead
-# we dead-reckon forward each frame using the last velocity we heard about
-# (so movement stays smooth even between packets), then gently blend any
-# drift out against the newest authoritative position instead of snapping
+# remote balls coast between updates n ease back toward the real position,
+# otherwise one dropped packet makes em look like theyre teleporting
 var _net_target_position: Vector2 = Vector2.ZERO
 var _net_target_rotation: float = 0.0
 var _net_velocity: Vector2 = Vector2.ZERO
 var _net_initialized: bool = false
 const NET_CORRECTION_RATE: float = 48.0 # higher = snaps to the real position faster, lower = smoother but laggier
 
-# ok so right after spawning the first couple physics frames can report a
-# floor_normal thats juuust barely off from perfectly flat (0,-1) before the
-# collision fully settles in, n without this grace window that tiny wobble
-# reads as "bro's on a slope" n the roll-down-slopes code below yeets the
-# ball sideways right out from under itself before the player even sees it land
+# give fresh spawns a beat to settle before slope rolling kicks in
 var _spawn_grace_frames: int = 30
 
 # each bounce fades the sound out so it gets quieter n quieter, kinda neat
@@ -86,50 +99,63 @@ var bounce_volume_db: float = 0.0
 const BOUNCE_FADE_DB: float = 6.0     # how many dB quieter each bounce gets
 const BOUNCE_MIN_DB: float = -40.0    # quiet enough that it just stops playing
 
-# death handling, starts below the corner (in "the void") n rises up into view
-# using the EXACT same velocity/gravity/move_and_slide a normal jump uses,
-# peaks right in the corner spot matching the reference pic, then falls back
-# down n out for good
+# death handling: gray the ball n pop it away while the lil death mark hangs around
 var is_dead: bool = false
-var death_entry_y: float = 0.0
-const DEATH_SINK_MARGIN: float = 150.0 # how far past where it re-entered before it gets removed
-const DEATH_RISE_MARGIN: float = 60.0  # extra distance below screen edge so the climb in is actually visible n not instant
-
-const DEATH_ANCHOR_X: float = 1050.0   # base x, measured off the reference so the face reads fully
-const DEATH_ANCHOR_Y: float = 570.0    # base y, same deal
-const DEATH_STEP_X: float = 300.0      # each further simultaneous death steps this far left...
-const DEATH_STEP_Y: float = 25.0       # ...n this far down so they dont stack on top of each other
-const DEATH_SPRITE_SCALE: float = 0.8  # dead face size, matched to the ref proportions
-
-# shared across every player instance so simultaneous deaths space themselves
-# out in the corner instead of all landing on top of each other lol
-static var dead_count: int = 0
-
-static func reset_deaths() -> void:
-	dead_count = 0
+var _visual_tween: Tween
+var _death_sprite_rotation: float = 0.0
 
 func _play_spawn_animation() -> void:
 	# pop in animation when the player spawns, lil juice
 	if sprite:
+		if _visual_tween and _visual_tween.is_running():
+			_visual_tween.kill()
 		sprite.scale = Vector2.ZERO
-		var tween := create_tween()
-		tween.tween_property(sprite, "scale", sprite_base_scale, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_visual_tween = create_tween()
+		_visual_tween.tween_property(sprite, "scale", sprite_base_scale, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	# play the spawn sound too
 	if spawn_audio and spawn_audio.stream:
 		spawn_audio.play()
 
 func _play_death_pop_animation() -> void:
-	# pop out animation when player dies, right before the sad face grows big
-	if sprite:
-		var tween := create_tween()
-		# quick pop out then shrink back to zero
-		tween.tween_property(sprite, "scale", sprite_base_scale * 1.3, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(sprite, "scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	if not sprite:
+		return
+	if _visual_tween and _visual_tween.is_running():
+		_visual_tween.kill()
+
+	# grayscale n then reverse the DRAW banner pop so the ball vanishes clean
+	if shader_mat:
+		shader_mat.set_shader_parameter("skin_color", Color(0.5, 0.5, 0.5))
+	else:
+		sprite.modulate = Color(0.5, 0.5, 0.5)
+
+	sprite.visible = true
+	sprite.rotation = _death_sprite_rotation
+	sprite.scale = sprite_base_scale
+	_visual_tween = create_tween()
+	var death_position := position
+	var shake_offsets: Array[Vector2] = [
+		Vector2(5.0, -2.0), Vector2(-5.0, 1.0), Vector2(4.0, 2.0),
+		Vector2(-4.0, -1.0), Vector2(3.0, 1.0), Vector2(-3.0, 0.0), Vector2.ZERO
+	]
+	# lil panic shake first, then the ball n its name pop away together
+	for offset in shake_offsets:
+		_visual_tween.tween_property(self, "position", death_position + offset, 0.045).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_visual_tween.tween_property(sprite, "scale", Vector2.ZERO, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	if name_label:
+		_visual_tween.parallel().tween_property(name_label, "scale", Vector2.ZERO, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+
+func _has_network_peer() -> bool:
+	# Godot always gives solo games an OfflineMultiplayerPeer, so just checking
+	# for a peer makes solo play act like its waiting on an actual lobby host.
+	if not multiplayer.has_multiplayer_peer():
+		return false
+	var active_peer := multiplayer.multiplayer_peer
+	return active_peer != null and not (active_peer is OfflineMultiplayerPeer)
 
 func _ready() -> void:
 	# gotta figure out if this ball is ours or some other dude's online
-	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if _has_network_peer():
 		is_local_player = (player_id == multiplayer.get_unique_id())
 		set_multiplayer_authority(player_id)
 	else:
@@ -192,7 +218,7 @@ func setup_player(id: int, p_name: String, color: Color, powers: Array = ["dash"
 	player_color = color
 	equipped_powers = powers.duplicate()
 
-	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if _has_network_peer():
 		is_local_player = (player_id == multiplayer.get_unique_id())
 		set_multiplayer_authority(player_id)
 
@@ -212,92 +238,84 @@ func setup_player(id: int, p_name: String, color: Color, powers: Array = ["dash"
 
 
 func die() -> void:
+	if is_dead:
+		return
+	if _has_network_peer():
+		var network_mgr = get_node_or_null("/root/NetworkManager")
+		if not NetworkManagerScript.is_host:
+			# only the owning client can report its own local collision result
+			if not is_local_player:
+				return
+			_finish_death()
+			if network_mgr:
+				network_mgr.report_player_death(player_id)
+			return
+		if network_mgr:
+			network_mgr.report_player_death(player_id)
+			return
+	_finish_death()
+
+func apply_authoritative_death() -> void:
+	# host-approved death arrives here so it doesnt get re-reported back to host
+	_finish_death()
+
+func _finish_death() -> void:
 	# never process a death twice for the same ball lol (like void zone AND
 	# something else calling die() same frame, dont wanna double dip that)
 	if is_dead:
 		return
 	is_dead = true
-	
-	# play the death pop anim first
-	_play_death_pop_animation()
-	
+	if sprite:
+		_death_sprite_rotation = sprite.rotation
+
 	is_dashing = false
 	if is_spiky:
 		_stop_spiky()
+	if is_holding_bomb:
+		is_holding_bomb = false
+		_hide_bomb_hold_visual()
+		if is_local_player and _has_network_peer():
+			_sync_bomb_hold.rpc(false)
 	if wind_trail and wind_trail.has_method("stop_trail"):
 		wind_trail.stop_trail()
-	player_died.emit(player_id)
 
-	# stop taking part in gameplay physics/collision entirely, the death hop
-	# below is its own lil fake-gravity animation, not real collision anymore
+	# stop taking part in gameplay physics/collision entirely
 	velocity = Vector2.ZERO
 	collision_layer = 0
 	collision_mask = 0
+	set_physics_process(false)
+	player_died.emit(player_id)
 
 	# a fresh death shouldnt leak a still-playing jump/bounce sound into it
 	if impact_audio and impact_audio.playing:
 		impact_audio.stop()
 
-	# swap to the sad face texture n blow it up to corner-avatar size
-	if sprite:
-		var sad_tex := load("res://Character/CharacterSad.svg") as Texture2D
-		if sad_tex:
-			sprite.texture = sad_tex
-		sprite.rotation = 0.0
-		sprite.scale = sprite_base_scale * (DEATH_SPRITE_SCALE / 0.19)
+	# keep the death marker readable while the ball does its pop-out bit
+	if spikes_visual:
+		spikes_visual.visible = false
 
-	# the gamer tag doesnt scale with the sprite so it just floats weird in
-	# the middle of the big dead face, just hide it, matches the ref look better
 	if name_label:
-		name_label.visible = false
+		name_label.text = player_display_name + " ✕"
+		name_label.visible = true
+		name_label.scale = Vector2.ONE
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		name_label.pivot_offset = name_label.size * 0.5
+
+	_play_death_pop_animation()
 
 	# sad trombone noise lmao
 	if death_audio and death_audio.stream:
 		death_audio.play()
 
-	# figure out this death's slot in the corner, each simultaneous death claims
-	# the next one, stepping further left n slightly further down than the last
-	var death_index := dead_count
-	dead_count += 1
-	var anchor_x := DEATH_ANCHOR_X - death_index * DEATH_STEP_X
-	var anchor_y := DEATH_ANCHOR_Y + death_index * DEATH_STEP_Y
-
-	# the sad face sprite is WAY bigger than the ball so hiding just its
-	# center below the screen aint enough, top of a tall sprite can still
-	# poke into view right away. gotta measure how tall it actually renders
-	# rn (after the texture swap n scale change above) so we know how far
-	# down its top edge really sits
-	var sprite_half_height: float = 0.0
-	if sprite and sprite.texture:
-		sprite_half_height = sprite.texture.get_height() * sprite.scale.y * 0.5
-
-	# start low enough that the WHOLE sprite is below the visible area, plus
-	# a lil extra so theres a beat of travel before it crosses the bottom
-	# edge, thats what reads as climbing outta the ground instead of just
-	# teleporting into view
-	var screen_bottom: float = get_viewport_rect().size.y
-	var hidden_y: float = screen_bottom + sprite_half_height + DEATH_RISE_MARGIN
-	var required_rise: float = max(hidden_y - anchor_y, 0.0)
-
-	# solve for the launch speed that makes a normal gravity arc (same
-	# gravity/move_and_slide the rest of the game uses for jumping) peak
-	# exactly at the corner spot after covering that whole distance, math ig
-	var gravity_y: float = get_gravity().y
-	var launch_velocity_y: float = -sqrt(2.0 * gravity_y * required_rise) if gravity_y > 0.0 else jump_velocity
-
-	death_entry_y = anchor_y + required_rise
-	global_position = Vector2(anchor_x, death_entry_y)
-
-	# launch it up at that solved speed, every frame from here uses the exact
-	# same gravity + move_and_slide() as a normal jump too (see
-	# _death_physics_process below) so it decelerates n settles into the
-	# corner just like landing a jump would
-	velocity = Vector2(0.0, launch_velocity_y)
+	# stick around silently for a beat so the text/sound actually register,
+	# then gone for good
+	await get_tree().create_timer(1.0).timeout
+	queue_free()
 
 func _physics_process(delta: float) -> void:
-	# dead balls run their own tiny gravity sim instead of the normal movement code
+	# dead balls dont do anything anymore, just sit there as text til they're freed
 	if is_dead:
-		_death_physics_process(delta)
 		return
 
 	# if this aint our ball, let the network sync move it instead, we just
@@ -331,12 +349,7 @@ func _physics_process(delta: float) -> void:
 			_spawn_grace_frames -= 1
 		else:
 			var floor_normal = get_floor_normal()
-			# use a tolerance instead of exact equality, physics computed
-			# normals are basically never bit-exact (0,-1) even on perfectly
-			# flat ground, so an exact != comparison misreads flat floors as
-			# slopes n adds a tiny sideways push every single frame. harmless
-			# on one big continuous floor where u cant even tell, but on a
-			# narrow floating platform it slowly rolls the ball right off the edge
+			# floor normals wobble a tiny bit, so dont call every flat tile a slope
 			if floor_normal != Vector2.ZERO and floor_normal.dot(Vector2.UP) < 0.999:
 				var slope_tangent = Vector2(floor_normal.y, -floor_normal.x)
 				var slope_pull = gravity.dot(slope_tangent)
@@ -360,15 +373,13 @@ func _physics_process(delta: float) -> void:
 			if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 				input_x += 1.0
 
-	# 3. mouse steer, hold left click n the ball rolls toward ur cursor (DISABLED on mobile)
-	if input_x == 0.0 and not mobile_active and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		var mouse_pos = get_global_mouse_position()
-		var diff_x = mouse_pos.x - global_position.x
-		if abs(diff_x) > 16.0:
-			input_x = clamp(diff_x / 100.0, -1.0, 1.0)
+	# 3. mouse steer used to live here (hold left click to roll toward cursor),
+	# but left click is now Power Slot 1's trigger button, so it got removed
+	# to stop the two fighting each other every time u click
 
-	# when spiky's popped manual steering is locked!! momentum just rolls naturally
-	if is_spiky:
+	# when spiky's popped OR ur holding a bomb, manual steering is locked!!
+	# momentum just rolls naturally, cant fight it
+	if is_spiky or is_holding_bomb:
 		input_x = 0.0
 
 	# speed up or coast smooth with inertia so it rolls a bit further, feels nicer
@@ -390,6 +401,64 @@ func _physics_process(delta: float) -> void:
 	
 	if dash_just_pressed:
 		_try_dash(input_x)
+
+	# bomb cooldown ticks down same as the other two
+	if bomb_cooldown_timer > 0.0:
+		bomb_cooldown_timer = max(bomb_cooldown_timer - delta, 0.0)
+
+	var bomb_just_pressed = Input.is_action_just_pressed("bomb")
+	if mobile_active and mobile_controls.has_method("is_bomb_just_pressed") and mobile_controls.is_bomb_just_pressed():
+		bomb_just_pressed = true
+	if bomb_just_pressed:
+		_try_bomb()
+
+	var bomb_just_released = Input.is_action_just_released("bomb")
+	if mobile_active and mobile_controls.has_method("is_bomb_just_released") and mobile_controls.is_bomb_just_released():
+		bomb_just_released = true
+	if bomb_just_released:
+		_release_bomb()
+
+	# power slots: whatever ability sits in equip slot 1/2/3 fires off the
+	# matching mouse button (left/middle/right). lets us just swap the array
+	# order in the loadout menu instead of hardcoding one button per power
+	# clicking a settings slider shouldnt also fire an attack at somebody lol
+	var match_menu_open := false
+	for menu_overlay in get_tree().get_nodes_in_group("match_menu_overlay"):
+		if bool(menu_overlay.get("menu_is_open")):
+			match_menu_open = true
+			break
+	for slot_index in range(min(equipped_powers.size(), 3)):
+		var slot_action := "power_slot_%d" % (slot_index + 1)
+		var slot_power: String = equipped_powers[slot_index]
+		# phone taps can also arrive as left mouse clicks, so dont let any tap
+		# on the screen accidentally fire slot one instead of its touch button lol
+		if not mobile_active and not match_menu_open and Input.is_action_just_pressed(slot_action):
+			_try_power(slot_power, input_x)
+		if not mobile_active and slot_power == "bomb" and Input.is_action_just_released(slot_action):
+			_release_bomb()
+
+	# bomb hold ticking: startup windup counts down, n if u greedily hold it
+	# past the limit it just goes off in ur hands, no throw, no mercy.
+		# keep tracking the aim so the bomb circles the ball at a fixed lil radius
+	if is_holding_bomb:
+		if bomb_startup_frames_remaining > 0:
+			bomb_startup_frames_remaining -= 1
+		bomb_hold_timer += delta
+
+		if mobile_active:
+			# joystick points the held bomb around its little orbit on phones
+			var joystick_aim: Vector2 = mobile_controls.get_joystick_vector()
+			if joystick_aim.length() > 0.15:
+				bomb_aim_dir = joystick_aim.normalized()
+		else:
+			var to_mouse: Vector2 = get_global_mouse_position() - global_position
+			if to_mouse.length() > 1.0:
+				bomb_aim_dir = to_mouse.normalized()
+		if _bomb_hold_sprite:
+			_bomb_hold_sprite.position = bomb_aim_dir * BOMB_HOLD_RADIUS
+
+		if bomb_hold_timer >= BOMB_FUSE_TIME:
+			_detonate_held_bomb()
 
 	if is_dashing:
 		dash_time_remaining -= delta
@@ -415,12 +484,13 @@ func _physics_process(delta: float) -> void:
 			_stop_spiky()
 
 	# jump w/ space / w / up arrow / mobile button (edge triggered so holding it
-	# down doesnt spam jump every frame, learned that one the hard way)
+	# down doesnt spam jump every frame, learned that one the hard way).
+	# blocked while spiky's popped or ur holding a bomb, same as steering
 	var jump_pressed = Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("ui_accept")
 	if mobile_active and mobile_controls.is_jump_just_pressed():
 		jump_pressed = true
 	
-	if jump_pressed and is_on_floor():
+	if jump_pressed and is_on_floor() and not is_spiky and not is_holding_bomb:
 		velocity.y = jump_velocity
 		# play the pop sound n reset bounce volume for whenever it lands next
 		bounce_volume_db = 0.0
@@ -461,28 +531,11 @@ func _physics_process(delta: float) -> void:
 	# so ts makes like so the player position gets syncronizated across everyone
 	# else's screen too, basically we just spam our transform out over rpc so
 	# the other clients see us rolling around in real time n it doesnt look laggy
-	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
-		_sync_transform.rpc(global_position, sprite.rotation if sprite else 0.0, velocity)
-
-func _death_physics_process(delta: float) -> void:
-	# identical integration to a normal jump, accumulate gravity into velocity
-	# then move_and_slide(), same property same call same order of ops fr.
-	# collision is off (layer/mask 0) so nothing blocks it, it just arcs freely
-	velocity += get_gravity() * delta
-	move_and_slide()
-
-	# its falling back down now (not still rising) n has sunk well past where
-	# it re-entered, so its gone into the void for good, remove it from the scene
-	if velocity.y > 0.0 and global_position.y >= death_entry_y + DEATH_SINK_MARGIN:
-		queue_free()
+	if _has_network_peer():
+		_sync_transform.rpc(global_position, sprite.rotation if sprite else 0.0, velocity, bomb_aim_dir)
 
 func _remote_interpolate(delta: float) -> void:
-	# runs on every OTHER peer's machine to move a non-local ball smoothly.
-	# dead reckon the target forward using the last velocity we heard about
-	# so it keeps rolling between packets instead of freezing, then blend
-	# our actual displayed position toward that target instead of snapping
-	# to it directly, that blend is what soaks up jitter/packet loss n makes
-	# it look like it never dropped a single packet even when it did
+	# keep remote balls rolling between packets, then ease out any drift
 	if not _net_initialized:
 		return
 
@@ -514,17 +567,22 @@ func _play_bounce_sound() -> void:
 		impact_audio.play()
 	bounce_volume_db -= BOUNCE_FADE_DB
 
-# this is the actual sync rpc that runs on every OTHER peer's machine to move
-# our ball around on their screen, keeps everyone lookin synced up basically.
-# doesnt snap position directly anymore, just feeds the interpolation target
-# that _remote_interpolate() smooths towards every physics frame
+# feed remote movement into the smoother instead of snapping the ball outright
 @rpc("unreliable")
-func _sync_transform(pos: Vector2, rot: float, vel: Vector2) -> void:
+func _sync_transform(pos: Vector2, rot: float, vel: Vector2, aim_dir: Vector2 = Vector2.RIGHT) -> void:
 	if is_local_player:
 		return
 	_net_target_position = pos
 	_net_target_rotation = rot
 	_net_velocity = vel
+
+	# mirror the thrower's current aim so a remote ball's held bomb orbits
+	# toward the same spot theirs does, instead of just sitting frozen
+	# wherever it first spawned in
+	if is_holding_bomb and aim_dir.length() > 0.01:
+		bomb_aim_dir = aim_dir
+		if _bomb_hold_sprite:
+			_bomb_hold_sprite.position = bomb_aim_dir * BOMB_HOLD_RADIUS
 
 	if not _net_initialized:
 		# first packet we've ever gotten for this ball, snap straight to it
@@ -538,7 +596,7 @@ func _try_dash(input_x: float) -> void:
 	# bro pressed dash, gotta check if were even allowed to send it rn
 	if not equipped_powers.has("dash"):
 		return
-	if dash_cooldown_timer > 0.0 or is_dead:
+	if dash_cooldown_timer > 0.0 or is_dead or is_spiky or is_holding_bomb:
 		return
 
 	# figure out which way to blast off
@@ -549,10 +607,10 @@ func _try_dash(input_x: float) -> void:
 	_start_dash(dir)
 
 	# tell the lobby boys we just dashed so they see the wind trail too
-	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if _has_network_peer():
 		_sync_dash.rpc(dash_direction)
 
-@rpc("unreliable")
+@rpc("reliable")
 func _sync_dash(dir: float) -> void:
 	# other player dashed, fire off the visual fx on our screen too
 	if is_local_player:
@@ -582,7 +640,7 @@ func _stop_dash() -> void:
 	# gotta tell the lobby boys the dash is over too or smth, otherwise their
 	# copy of our ball never hears about it (remote balls skip the local dash
 	# timer entirely, see _physics_process up top) n the trail just sits there forever lol
-	if is_local_player and multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if is_local_player and _has_network_peer():
 		_sync_dash_stop.rpc()
 
 @rpc("reliable")
@@ -618,16 +676,16 @@ func _try_spiky() -> void:
 	# bro pressed spiky, check if its equipped n actually ready to go
 	if not equipped_powers.has("spiky"):
 		return
-	if spiky_cooldown_timer > 0.0 or is_dead or is_spiky:
+	if spiky_cooldown_timer > 0.0 or is_dead or is_spiky or is_holding_bomb:
 		return
 
 	_start_spiky()
 
 	# tell everyone in the lobby we just sprouted spikes lmao
-	if multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if _has_network_peer():
 		_sync_spiky.rpc(true)
 
-@rpc("unreliable")
+@rpc("reliable")
 func _sync_spiky(active: bool) -> void:
 	if is_local_player:
 		return
@@ -657,5 +715,165 @@ func _stop_spiky() -> void:
 	if spike_hitbox:
 		spike_hitbox.monitoring = false
 
-	if is_local_player and multiplayer.has_multiplayer_peer() and multiplayer.multiplayer_peer != null:
+	if is_local_player and _has_network_peer():
 		_sync_spiky.rpc(false)
+
+func _try_power(power_name: String, input_x: float) -> void:
+	# dispatch whatever ability sits in a mouse-slot to its actual trigger fn
+	match power_name:
+		"dash":
+			_try_dash(input_x)
+		"spiky":
+			_try_spiky()
+		"bomb":
+			_try_bomb()
+
+func _try_bomb() -> void:
+	# bro grabbed the bomb, check equipped/cooldown/not-already-mid-another-power
+	if not equipped_powers.has("bomb"):
+		return
+	if bomb_cooldown_timer > 0.0 or is_dead or is_holding_bomb or is_spiky:
+		return
+
+	is_holding_bomb = true
+	bomb_hold_timer = 0.0
+	bomb_startup_frames_remaining = BOMB_STARTUP_FRAMES
+
+	# cant be mid dash n suddenly pull a bomb out lol, cancel it clean
+	if is_dashing:
+		_stop_dash()
+
+	_show_bomb_hold_visual()
+
+	if _has_network_peer():
+		_sync_bomb_hold.rpc(true)
+
+@rpc("reliable")
+func _sync_bomb_hold(active: bool) -> void:
+	# other player started/stopped holding a bomb, mirror the visual on our screen
+	if is_local_player:
+		return
+	if active:
+		is_holding_bomb = true
+		bomb_hold_timer = 0.0
+		bomb_startup_frames_remaining = BOMB_STARTUP_FRAMES
+		_show_bomb_hold_visual()
+	else:
+		is_holding_bomb = false
+		_hide_bomb_hold_visual()
+
+func _show_bomb_hold_visual() -> void:
+	# lil bomb sprite tucked against the ball while its bein held, matches
+	# the ref art. skipped entirely (no crash) if the texture aint in the
+	# project yet
+	if _bomb_hold_sprite:
+		return
+	if not ResourceLoader.exists("res://Menu/Bomb.png"):
+		return
+	var tex := load("res://Menu/Bomb.png") as Texture2D
+	if not tex:
+		return
+
+	_bomb_hold_sprite = Sprite2D.new()
+	_bomb_hold_sprite.texture = tex
+	_bomb_hold_sprite.scale = Vector2(BOMB_HOLD_SCALE, BOMB_HOLD_SCALE)
+	_bomb_hold_sprite.position = bomb_aim_dir * BOMB_HOLD_RADIUS
+	_bomb_hold_sprite.z_index = 3
+	add_child(_bomb_hold_sprite)
+
+func _hide_bomb_hold_visual() -> void:
+	if _bomb_hold_sprite:
+		_bomb_hold_sprite.queue_free()
+		_bomb_hold_sprite = null
+
+func _release_bomb() -> void:
+	if not is_holding_bomb:
+		return
+
+	is_holding_bomb = false
+	bomb_cooldown_timer = BOMB_COOLDOWN
+	_hide_bomb_hold_visual()
+
+	if _has_network_peer():
+		_sync_bomb_hold.rpc(false)
+
+	if is_dead:
+		return
+
+	# let go before the startup windup finished? bomb just fumbles outta ur
+	# hand instead of a proper throw, gotta wait out the full windup to chuck
+	# it at full force
+	var throw_speed: float = BOMB_THROW_FORCE if bomb_startup_frames_remaining <= 0 else BOMB_THROW_FORCE * 0.3
+
+	# throw exactly where u were AIMING (the mouse direction the held bomb
+	# was already orbiting toward), not the direction u last walked in. those
+	# two used to be different vars n it made throws come out backwards
+	# whenever u aimed one way after having last moved the other way
+	var throw_dir: Vector2 = bomb_aim_dir.normalized() if bomb_aim_dir.length() > 0.01 else Vector2.RIGHT
+	var throw_velocity := throw_dir * throw_speed
+	var spawn_pos := global_position + throw_dir * BOMB_SPAWN_DISTANCE
+
+	# whatever time was left on the SAME fuse clock that started counting the
+	# moment we pulled the bomb out -- holding it a while before throwing
+	# means it goes off almost right away once it leaves ur hand, exactly
+	# the grenade-timing feel we're going for
+	var remaining_fuse: float = max(BOMB_FUSE_TIME - bomb_hold_timer, 0.05)
+	var bomb_id := _make_bomb_id()
+
+	_spawn_bomb(spawn_pos, throw_velocity, remaining_fuse, bomb_id)
+
+	if _has_network_peer():
+		_spawn_bomb_remote.rpc(spawn_pos, throw_velocity, remaining_fuse, bomb_id)
+
+func _detonate_held_bomb() -> void:
+	var blast_position := global_position
+	is_holding_bomb = false
+	bomb_cooldown_timer = BOMB_COOLDOWN
+	_hide_bomb_hold_visual()
+	if is_local_player and _has_network_peer():
+		_sync_bomb_hold.rpc(false)
+
+	# cook it all the way and let the blast decide who gets caught
+	var bomb_id := _make_bomb_id()
+	_spawn_bomb(blast_position, Vector2.ZERO, 0.0, bomb_id)
+	if _has_network_peer():
+		_spawn_bomb_remote.rpc(blast_position, Vector2.ZERO, 0.0, bomb_id)
+
+func _make_bomb_id() -> String:
+	_bomb_sequence += 1
+	return "%d:%d:%d" % [player_id, Time.get_ticks_usec(), _bomb_sequence]
+
+func _spawn_bomb(spawn_pos: Vector2, throw_velocity: Vector2, remaining_fuse: float, bomb_id: String) -> void:
+	if not BombScene or not get_tree().current_scene:
+		return
+	var network_mgr = get_node_or_null("/root/NetworkManager")
+	if network_mgr and network_mgr.has_resolved_bomb(bomb_id):
+		return
+	var bomb := BombScene.instantiate()
+	get_tree().current_scene.add_child(bomb)
+	bomb.explosion_radius = BOMB_EXPLOSION_RADIUS
+	bomb.launch(spawn_pos, throw_velocity, player_id, remaining_fuse, bomb_id)
+
+@rpc("reliable")
+func _spawn_bomb_remote(spawn_pos: Vector2, throw_velocity: Vector2, remaining_fuse: float, bomb_id: String) -> void:
+	# other player threw a bomb, spawn our own local copy of it so everyone
+	# sees roughly the same arc n explosion (each client sims it locally,
+	# same lightweight-sync approach the rest of the powers use)
+	if is_local_player:
+		return
+	_spawn_bomb(spawn_pos, throw_velocity, remaining_fuse, bomb_id)
+
+func apply_blast_knockback(blast_position: Vector2, knockback_radius: float, force: float) -> void:
+	if is_dead or not is_local_player or knockback_radius <= 0.0:
+		return
+	var away_from_blast := global_position - blast_position
+	var distance: float = away_from_blast.length()
+	if distance >= knockback_radius:
+		return
+	if distance <= 0.001:
+		away_from_blast = Vector2.UP
+	var falloff: float = 1.0 - distance / knockback_radius
+	var knockback_direction := away_from_blast.normalized()
+	# even a sideways blast gets a lil lift so a close miss actually launches u
+	knockback_direction.y = min(knockback_direction.y, -0.55)
+	velocity += knockback_direction.normalized() * force * falloff

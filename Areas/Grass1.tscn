@@ -52,14 +52,8 @@ tile_size = Vector2i(128, 128)
 physics_layer_0/collision_layer = 1
 sources/2 = SubResource("TileSetAtlasSource_tkhtv")
 
-[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_left"]
-normal = Vector2(1, 0)
-
-[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_right"]
-normal = Vector2(-1, 0)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_fn7em"]
-size = Vector2(2000, 400)
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_t17g4"]
+size = Vector2(30000, 400)
 
 [node name="Node2D" type="Node2D" unique_id=1995859632]
 script = ExtResource("1_match")
@@ -69,17 +63,6 @@ position = Vector2(13, 33)
 scale = Vector2(0.8, 0.8)
 tile_map_data = PackedByteArray("AAAAAAQAAgAAAAAAAAAKAAQAAgAAAAAAAAD//wQAAgAAAAAAAAALAAQAAgAAAAAAAAAEAAUAAgACAAAAAAAGAAUAAgADAAAAAAAFAAUAAgAAAAAAAAAIAAQAAgACAAAAAAACAAQAAgADAAAAAAABAAQAAgAAAAAAAAAJAAQAAgAAAAAAAAAMAAQAAgADAAAAAAAMAAUAAgADAAIAAAD+/wQAAgACAAAAAAD+/wUAAgACAAIAAAAGAAYAAgACAAAAADAFAAYAAgAAAAAAADAEAAYAAgADAAAAADACAAUAAgADAAIAAAAIAAUAAgACAAIAAAD//wUAAgAAAAAAADAAAAUAAgAAAAAAADABAAUAAgAAAAAAADAJAAUAAgAAAAAAADAKAAUAAgAAAAAAADALAAUAAgAAAAAAADA=")
 tile_set = SubResource("TileSet_8mp7d")
-
-[node name="Boundaries" type="StaticBody2D" parent="." unique_id=1008139893]
-collision_mask = 0
-
-[node name="LeftWall" type="CollisionShape2D" parent="Boundaries" unique_id=336383023]
-position = Vector2(0, 324)
-shape = SubResource("WorldBoundaryShape2D_left")
-
-[node name="RightWall" type="CollisionShape2D" parent="Boundaries" unique_id=613599617]
-position = Vector2(1152, 324)
-shape = SubResource("WorldBoundaryShape2D_right")
 
 [node name="Players" type="Node2D" parent="." unique_id=56397109]
 z_index = 1
@@ -104,4 +87,4 @@ collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="VoidZone" unique_id=542030500]
 position = Vector2(602, 1063)
-shape = SubResource("RectangleShape2D_fn7em")
+shape = SubResource("RectangleShape2D_t17g4")

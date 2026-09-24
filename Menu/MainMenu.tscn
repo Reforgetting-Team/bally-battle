@@ -9,6 +9,9 @@
 [ext_resource type="Texture2D" path="res://Menu/Settings.png" id="7_settings"]
 [ext_resource type="Texture2D" path="res://Menu/SettingsHover.png" id="8_settings_hover"]
 [ext_resource type="Script" path="res://Menu/SettingsButton.gd" id="9_settings_script"]
+[ext_resource type="Texture2D" path="res://Menu/Exit.png" id="10_exit"]
+[ext_resource type="Texture2D" path="res://Menu/ExitHover.png" id="11_exit_hover"]
+[ext_resource type="Script" path="res://Menu/ExitButton.gd" id="12_exit_script"]
 
 [node name="Control" type="Control" unique_id=1388597263]
 layout_mode = 3
@@ -26,9 +29,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -84.0
+offset_top = -131.0
 offset_right = 200.0
-offset_bottom = -4.0
+offset_bottom = -51.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -44,9 +47,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = 10.0
+offset_top = -37.0
 offset_right = 200.0
-offset_bottom = 90.0
+offset_bottom = 43.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -62,9 +65,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = 104.0
+offset_top = 57.0
 offset_right = 200.0
-offset_bottom = 184.0
+offset_bottom = 137.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_default_cursor_shape = 2
@@ -72,6 +75,25 @@ texture_normal = ExtResource("7_settings")
 texture_hover = ExtResource("8_settings_hover")
 script = ExtResource("9_settings_script")
 
+[node name="ExitButton" type="TextureButton" parent="." unique_id=765432101]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 151.0
+offset_right = 200.0
+offset_bottom = 231.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("10_exit")
+texture_hover = ExtResource("11_exit_hover")
+script = ExtResource("12_exit_script")
+
 [connection signal="pressed" from="PlayButton" to="PlayButton" method="_on_pressed"]
 [connection signal="pressed" from="TutorialButton" to="TutorialButton" method="_on_pressed"]
 [connection signal="pressed" from="SettingsButton" to="SettingsButton" method="_on_pressed"]
+[connection signal="pressed" from="ExitButton" to="ExitButton" method="_on_pressed"]

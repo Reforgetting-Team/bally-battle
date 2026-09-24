@@ -102,6 +102,26 @@ mouse_default_cursor_shape = 2
 theme_override_font_sizes/font_size = 20
 text = "Join Match"
 
+[node name="LANRoomsPanel" type="VBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel" unique_id=1337445001]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="LANRoomsTitle" type="Label" parent="CenterContainer/MainVBox/ConnectionPanel/LANRoomsPanel" unique_id=1337445002]
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Nearby LAN Rooms"
+horizontal_alignment = 1
+
+[node name="LANRoomScroll" type="ScrollContainer" parent="CenterContainer/MainVBox/ConnectionPanel/LANRoomsPanel" unique_id=1337445003]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+
+[node name="LANRoomList" type="VBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel/LANRoomsPanel/LANRoomScroll" unique_id=1337445004]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
 [node name="RoomPanel" type="VBoxContainer" parent="CenterContainer/MainVBox" unique_id=11223359]
 unique_name_in_owner = true
 visible = false

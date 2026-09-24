@@ -8,6 +8,9 @@ class_name MobileControlsPanel
 @onready var jump_button: TouchScreenButton = $JumpButton
 @onready var dash_button: TouchScreenButton = $DashButton
 @onready var spiky_button: TouchScreenButton = $SpikyButton
+# bomb button is optional, this scene may not have one added yet, everything
+# below is get_node_or_null-guarded so nothing breaks if its missing
+@onready var bomb_button: TouchScreenButton = get_node_or_null("BombButton")
 
 # cache these once instead of get_node_or_null-ing by string every frame,
 # way cheaper n we grab both Visual and Visual/Icon while were at it
@@ -16,6 +19,8 @@ class_name MobileControlsPanel
 @onready var spiky_visual: CanvasItem = spiky_button.get_node_or_null("Visual")
 @onready var dash_icon: CanvasItem = dash_button.get_node_or_null("Visual/Icon")
 @onready var spiky_icon: CanvasItem = spiky_button.get_node_or_null("Visual/Icon")
+@onready var bomb_visual: CanvasItem = get_node_or_null("BombButton/Visual")
+@onready var bomb_icon: CanvasItem = get_node_or_null("BombButton/Visual/Icon")
 
 
 var joystick_touch_index: int = -1
@@ -30,12 +35,18 @@ var active_touches: Dictionary = {}
 var jump_pressed_last_frame: bool = false
 var dash_pressed_last_frame: bool = false
 var spiky_pressed_last_frame: bool = false
+var bomb_pressed_last_frame: bool = false
 
 var jump_just_pressed: bool = false
 var dash_just_pressed: bool = false
 var spiky_just_pressed: bool = false
+var bomb_just_pressed: bool = false
+var bomb_just_released: bool = false
 
 var is_mobile_active: bool = false
+var _layout_reference_size: Vector2 = Vector2(1152.0, 648.0)
+var _touch_layout_buttons: Array[TouchScreenButton] = []
+var _authored_touch_positions: Array[Vector2] = []
 
 func _ready() -> void:
 	# only show up on mobile/touch devices OR when were just testing it
@@ -48,8 +59,11 @@ func _ready() -> void:
 	
 	is_mobile_active = true
 	
-	# position the buttons based on screen size (theyre all centered shapes now)
-	_position_controls()
+	# keep the scene positions as the layout starting point, then stick each
+	# touch button to the nearest screen edges when the phone aspect ratio shifts
+	_capture_touch_button_layout()
+	get_viewport().size_changed.connect(_layout_touch_buttons)
+	_layout_touch_buttons()
 	
 	# get the joystick values set up n ready to go
 	joystick_center = joystick_base.global_position + joystick_base.size / 2
@@ -66,24 +80,33 @@ func _ready() -> void:
 	# gotta make sure touch input is actually turned on
 	set_process_input(true)
 
+func _capture_touch_button_layout() -> void:
+	_layout_reference_size = Vector2(
+		float(ProjectSettings.get_setting("display/window/size/viewport_width", 1152)),
+		float(ProjectSettings.get_setting("display/window/size/viewport_height", 648))
+	)
+	_touch_layout_buttons = [jump_button, dash_button, spiky_button]
+	if bomb_button:
+		_touch_layout_buttons.append(bomb_button)
 
-func _position_controls() -> void:
-	var screen_size = get_viewport().get_visible_rect().size
-	
-	# since shape_centered is true, the position IS the center of the button
-	# beefed up the margins so we dont clip into the rounded corners n stuff
-	
-	# jump button, bottom right (100px margin from bottom, 80px from right)
-	jump_button.position = Vector2(screen_size.x - 80, screen_size.y - 100)
-	
-	# dash button, sits right above jump (100px spacing vertically)
-	dash_button.position = Vector2(screen_size.x - 80, screen_size.y - 200)
-	
-	# spiky button, off to the left n diagonally between dash n jump
-	spiky_button.position = Vector2(screen_size.x - 180, screen_size.y - 150)
-	
-	# joystick, bottom left (same y as jump button since the anchor's centered)
-	joystick_base.position = Vector2(100, screen_size.y - 200)
+	_authored_touch_positions.clear()
+	for button in _touch_layout_buttons:
+		_authored_touch_positions.append(button.position)
+
+func _layout_touch_buttons() -> void:
+	var screen_size := get_viewport().get_visible_rect().size
+	for index in range(_touch_layout_buttons.size()):
+		var button: TouchScreenButton = _touch_layout_buttons[index]
+		var authored_position: Vector2 = _authored_touch_positions[index]
+		var responsive_position := authored_position
+
+		# positions on the right/bottom half keep the scene-authored edge gap
+		if authored_position.x > _layout_reference_size.x * 0.5:
+			responsive_position.x = screen_size.x - (_layout_reference_size.x - authored_position.x)
+		if authored_position.y > _layout_reference_size.y * 0.5:
+			responsive_position.y = screen_size.y - (_layout_reference_size.y - authored_position.y)
+
+		button.position = responsive_position
 
 func _process(_delta: float) -> void:
 	if not is_mobile_active:
@@ -115,14 +138,18 @@ func _update_button_states() -> void:
 	var jump_now = jump_button and jump_button.is_pressed()
 	var dash_now = dash_button and dash_button.is_pressed()
 	var spiky_now = spiky_button and spiky_button.is_pressed()
+	var bomb_now = bomb_button and bomb_button.is_pressed()
 	
 	jump_just_pressed = jump_now and not jump_pressed_last_frame
 	dash_just_pressed = dash_now and not dash_pressed_last_frame
 	spiky_just_pressed = spiky_now and not spiky_pressed_last_frame
+	bomb_just_pressed = bomb_now and not bomb_pressed_last_frame
+	bomb_just_released = not bomb_now and bomb_pressed_last_frame
 	
 	jump_pressed_last_frame = jump_now
 	dash_pressed_last_frame = dash_now
 	spiky_pressed_last_frame = spiky_now
+	bomb_pressed_last_frame = bomb_now
 	
 	# lil visual feedback so buttons pop more when actually pressed
 	_update_button_visual_feedback()
@@ -196,6 +223,15 @@ func is_spiky_pressed() -> bool:
 func is_spiky_just_pressed() -> bool:
 	return spiky_just_pressed
 
+func is_bomb_pressed() -> bool:
+	return bomb_button != null and bomb_button.is_pressed()
+
+func is_bomb_just_pressed() -> bool:
+	return bomb_just_pressed
+
+func is_bomb_just_released() -> bool:
+	return bomb_just_released
+
 func is_active() -> bool:
 	return is_mobile_active and visible
 
@@ -212,6 +248,9 @@ func _update_button_visual_feedback() -> void:
 	if spiky_visual:
 		spiky_visual.modulate.a = 1.0 if spiky_pressed_last_frame else 0.7
 
+	if bomb_visual:
+		bomb_visual.modulate.a = 1.0 if bomb_pressed_last_frame else 0.7
+
 func set_button_colors(player_color: Color) -> void:
 	# so ts tints the button icons to match whatever color the player picked
 	if dash_icon:
@@ -219,6 +258,9 @@ func set_button_colors(player_color: Color) -> void:
 	
 	if spiky_icon:
 		spiky_icon.modulate = player_color
+
+	if bomb_icon:
+		bomb_icon.modulate = player_color
 
 func set_equipped_powers(powers: Array) -> void:
 	# only show the buttons for powers we actually got equipped or smth, no
@@ -228,3 +270,6 @@ func set_equipped_powers(powers: Array) -> void:
 	
 	if spiky_button:
 		spiky_button.visible = powers.has("spiky")
+
+	if bomb_button:
+		bomb_button.visible = powers.has("bomb")

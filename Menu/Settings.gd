@@ -3,6 +3,7 @@ extends Control
 # settings screen so ppl can adjust volume n other lil options n stuff
 
 @onready var back_button: TextureButton = %BackButton
+@onready var settings_backdrop: ColorRect = get_node_or_null("SettingsBackdrop")
 @onready var master_slider: HSlider = %MasterSlider
 @onready var music_slider: HSlider = %MusicSlider
 @onready var debug_check: CheckButton = %DebugCheckButton
@@ -13,8 +14,7 @@ extends Control
 @onready var window_mode_box: HBoxContainer = %WindowModeBox
 @onready var window_mode_option: OptionButton = %WindowModeOptionButton
 
-# fps limit choices shown in the dropdown, mapped to the actual value we
-# hand to Engine.max_fps (0 = unlimited)
+# dropdown labels n the real Engine.max_fps values behind em
 const FPS_OPTIONS: Array = [
 	{"label": "30 FPS", "value": 30},
 	{"label": "60 FPS", "value": 60},
@@ -26,7 +26,7 @@ const FPS_OPTIONS: Array = [
 ]
 
 func _ready() -> void:
-	UITransitions.animate_in(self, [back_button])
+	UITransitions.animate_in(self, [back_button, settings_backdrop])
 
 	if master_slider:
 		var master_idx := AudioServer.get_bus_index("Master")
@@ -66,9 +66,7 @@ func _setup_graphics_controls() -> void:
 		vsync_check.button_pressed = PlayerData.vsync_enabled
 		vsync_check.toggled.connect(_on_vsync_toggled)
 
-	# window mode is a desktop-only concept, mobile/web is always fullscreen
-	# so the whole row just doesnt make sense there n would probably conflict
-	# with however the OS actually handles the app window
+	# hide desktop window modes where the platform owns the window
 	if OS.has_feature("mobile") or OS.has_feature("web"):
 		if window_mode_box:
 			window_mode_box.visible = false
@@ -117,9 +115,12 @@ func _on_window_mode_selected(index: int) -> void:
 
 func _on_back_pressed() -> void:
 	back_button.disabled = true
-	UITransitions.animate_out(self, _go_to_main_menu, [back_button])
+	var return_action := Callable(self, "_go_to_main_menu")
+	var settings_owner := get_parent()
+	if settings_owner and settings_owner.has_method("close_settings"):
+		return_action = Callable(settings_owner, "close_settings")
+	UITransitions.animate_out(self, return_action, [back_button, settings_backdrop])
 	UITransitions.animate_node_out_up(back_button, Callable())
 
 func _go_to_main_menu() -> void:
 	get_tree().change_scene_to_file("res://Menu/MainMenu.tscn")
-

@@ -4,18 +4,38 @@ extends Node
 
 const DEFAULT_PORT: int = 8910
 const DEFAULT_IP: String = "127.0.0.1"
+const LAN_DISCOVERY_PORT: int = 8911
+const LAN_ADVERTISEMENT_INTERVAL: float = 1.0
+const LAN_ROOM_TIMEOUT_MSEC: int = 3500
+const LAN_PROTOCOL: String = "bally_battle_lan_v1"
+const MAX_PLAYER_NAME_LENGTH: int = 20
+const MAX_EQUIPPED_POWERS: int = 3
+const VALID_POWERS: PackedStringArray = ["dash", "spiky", "bomb"]
+const BLAST_KNOCKBACK_RADIUS_SCALE: float = 2.5
+const BLAST_KNOCKBACK_FORCE: float = 1300.0
+const ExplosionScript = preload("res://Character/Explosion.gd")
 
 # holding the boys info so we know who is who n what color they picked
 static var players: Dictionary = {}
 static var is_host: bool = false
 static var peer: ENetMultiplayerPeer = null
 static var instance: Node = null
+static var resolved_bomb_expiries: Dictionary = {}
+var _pending_player_deaths: Dictionary = {}
+var _death_batch_scheduled: bool = false
+var _lan_socket: PacketPeerUDP = PacketPeerUDP.new()
+var _lan_socket_ready: bool = false
+var _lan_advertisement_timer: float = 0.0
+var _lan_rooms: Dictionary = {}
+var is_match_active: bool = false
+var hosted_port: int = DEFAULT_PORT
 
 signal player_list_changed
 signal connection_succeeded
 signal connection_failed
 signal server_disconnected
 signal match_started
+signal lan_rooms_changed
 
 func _enter_tree() -> void:
 	instance = self
@@ -28,6 +48,97 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	_start_lan_discovery()
+
+func _process(delta: float) -> void:
+	if not _lan_socket_ready:
+		return
+	_poll_lan_rooms()
+	_expire_lan_rooms()
+
+	if not is_host or peer == null or is_match_active:
+		return
+	_lan_advertisement_timer -= delta
+	if _lan_advertisement_timer <= 0.0:
+		_broadcast_lan_room()
+		_lan_advertisement_timer = LAN_ADVERTISEMENT_INTERVAL
+
+func _start_lan_discovery() -> void:
+	var bind_error: Error = _lan_socket.bind(LAN_DISCOVERY_PORT, "*")
+	if bind_error != OK:
+		push_warning("LAN room discovery could not bind UDP port %d (error %d)" % [LAN_DISCOVERY_PORT, bind_error])
+		return
+	_lan_socket.set_broadcast_enabled(true)
+	_lan_socket_ready = true
+
+func _broadcast_lan_room() -> void:
+	var room_packet := {
+		"protocol": LAN_PROTOCOL,
+		"port": hosted_port,
+		"name": PlayerData.player_name,
+		"players": players.size(),
+		"capacity": 32
+	}
+	_lan_socket.set_dest_address("255.255.255.255", LAN_DISCOVERY_PORT)
+	var send_error: Error = _lan_socket.put_packet(JSON.stringify(room_packet).to_utf8_buffer())
+	if send_error != OK:
+		push_warning("LAN room advertisement failed (error %d)" % send_error)
+
+func _poll_lan_rooms() -> void:
+	while _lan_socket.get_available_packet_count() > 0:
+		var packet_bytes: PackedByteArray = _lan_socket.get_packet()
+		var sender_ip: String = _lan_socket.get_packet_ip()
+		var packet_data: Variant = JSON.parse_string(packet_bytes.get_string_from_utf8())
+		if not (packet_data is Dictionary):
+			continue
+		if packet_data.get("protocol", "") != LAN_PROTOCOL:
+			continue
+		if sender_ip.is_empty() or get_bindable_addresses().has(sender_ip):
+			continue
+
+		var room_port: int = int(packet_data.get("port", 0))
+		if room_port < 1 or room_port > 65535:
+			continue
+		var room_name: String = str(packet_data.get("name", "Player")).strip_edges()
+		room_name = room_name.replace("\n", " ").replace("\r", " ").left(MAX_PLAYER_NAME_LENGTH)
+		if room_name.is_empty():
+			room_name = "Player"
+		var player_count: int = clampi(int(packet_data.get("players", 1)), 1, 32)
+		var room_key: String = "%s:%d" % [sender_ip, room_port]
+		var changed := true
+		if _lan_rooms.has(room_key):
+			var previous_room: Dictionary = _lan_rooms[room_key]
+			changed = previous_room.get("name", "") != room_name or previous_room.get("players", 0) != player_count
+		_lan_rooms[room_key] = {
+			"ip": sender_ip,
+			"port": room_port,
+			"name": room_name,
+			"players": player_count,
+			"capacity": clampi(int(packet_data.get("capacity", 32)), 1, 32),
+			"last_seen": Time.get_ticks_msec()
+		}
+		if changed:
+			lan_rooms_changed.emit()
+
+func _expire_lan_rooms() -> void:
+	var now_msec: int = Time.get_ticks_msec()
+	var removed_room := false
+	for room_key in _lan_rooms.keys():
+		var room: Dictionary = _lan_rooms[room_key]
+		if now_msec - int(room.get("last_seen", 0)) > LAN_ROOM_TIMEOUT_MSEC:
+			_lan_rooms.erase(room_key)
+			removed_room = true
+	if removed_room:
+		lan_rooms_changed.emit()
+
+func get_lan_rooms() -> Array[Dictionary]:
+	var rooms: Array[Dictionary] = []
+	var room_keys: Array = _lan_rooms.keys()
+	room_keys.sort()
+	for room_key in room_keys:
+		var room: Dictionary = _lan_rooms[room_key]
+		rooms.append(room.duplicate())
+	return rooms
 
 static func is_in_room() -> bool:
 	return peer != null
@@ -62,19 +173,21 @@ func create_game(bind_address: String = "", port: int = DEFAULT_PORT) -> Error:
 		return ERR_INVALID_PARAMETER
 
 	leave_game()
-	peer = ENetMultiplayerPeer.new()
 	var host = ENetMultiplayerPeer.new()
 	if not clean_bind.is_empty():
 		host.set_bind_ip(clean_bind)
 	var host_err = host.create_server(port, 32, 0, 0, 0)
 	if host_err != OK:
 		push_error("Failed to start server on %s:%d: %s" % [clean_bind, port, host_err])
+		host.close()
 		return host_err
 	bind_address = clean_bind
 
 	peer = host
 	multiplayer.multiplayer_peer = peer
 	is_host = true
+	is_match_active = false
+	hosted_port = port
 	# add the host in as player 1
 	players[1] = {
 		"name": PlayerData.player_name,
@@ -93,12 +206,14 @@ func join_game(address: String = DEFAULT_IP, port: int = DEFAULT_PORT) -> Error:
 	if target_ip.is_empty():
 		target_ip = DEFAULT_IP
 
-	peer = ENetMultiplayerPeer.new()
-	var err = peer.create_client(target_ip, port)
+	var client := ENetMultiplayerPeer.new()
+	var err = client.create_client(target_ip, port)
 	if err != OK:
 		push_error("Failed to create client connecting to %s:%d: %s" % [target_ip, port, err])
+		client.close()
 		return err
 
+	peer = client
 	multiplayer.multiplayer_peer = peer
 	is_host = false
 	print("Connecting to ", target_ip, ":", port)
@@ -113,6 +228,8 @@ func leave_game() -> void:
 		multiplayer.multiplayer_peer = null
 	players.clear()
 	is_host = false
+	is_match_active = false
+	hosted_port = DEFAULT_PORT
 	player_list_changed.emit()
 
 func update_player_info(new_name: String, new_color: Color, new_powers: Array = []) -> void:
@@ -122,10 +239,11 @@ func update_player_info(new_name: String, new_color: Color, new_powers: Array = 
 		return
 	if is_host:
 		if players.has(1):
-			players[1]["name"] = new_name
-			players[1]["color"] = new_color
+			var safe_info := _sanitize_player_info({"name": new_name, "color": new_color, "powers": new_powers})
+			players[1]["name"] = safe_info["name"]
+			players[1]["color"] = safe_info["color"]
 			if new_powers.size() > 0:
-				players[1]["powers"] = new_powers
+				players[1]["powers"] = safe_info["powers"]
 			_sync_players.rpc(players)
 			player_list_changed.emit()
 	else:
@@ -150,10 +268,11 @@ func _update_player_info_rpc(new_name: String, new_color: Color, new_powers: Arr
 		return
 	var sender_id = multiplayer.get_remote_sender_id()
 	if players.has(sender_id):
-		players[sender_id]["name"] = new_name
-		players[sender_id]["color"] = new_color
+		var safe_info := _sanitize_player_info({"name": new_name, "color": new_color, "powers": new_powers})
+		players[sender_id]["name"] = safe_info["name"]
+		players[sender_id]["color"] = safe_info["color"]
 		if new_powers.size() > 0:
-			players[sender_id]["powers"] = new_powers
+			players[sender_id]["powers"] = safe_info["powers"]
 		_sync_players.rpc(players)
 		player_list_changed.emit()
 
@@ -207,16 +326,97 @@ func _register_player(info: Dictionary) -> void:
 	if not is_host:
 		return
 	var sender_id = multiplayer.get_remote_sender_id()
-	players[sender_id] = info
-	print("Registered peer %d: %s" % [sender_id, info])
+	if sender_id <= 1:
+		return
+	players[sender_id] = _sanitize_player_info(info)
+	print("Registered peer %d: %s" % [sender_id, players[sender_id]])
 	_sync_players.rpc(players)
 	player_list_changed.emit()
+
+func _sanitize_player_info(info: Dictionary) -> Dictionary:
+	# only keep the lobby fields the game understands, since clients send this dictionary
+	var raw_name: Variant = info.get("name", "Player")
+	var safe_name: String = str(raw_name).strip_edges() if raw_name is String else "Player"
+	if safe_name.is_empty():
+		safe_name = "Player"
+	safe_name = safe_name.left(MAX_PLAYER_NAME_LENGTH)
+
+	var raw_color: Variant = info.get("color", Color.WHITE)
+	var safe_color: Color = raw_color if raw_color is Color else Color.WHITE
+	safe_color = Color(
+		clampf(safe_color.r, 0.0, 1.0),
+		clampf(safe_color.g, 0.0, 1.0),
+		clampf(safe_color.b, 0.0, 1.0),
+		clampf(safe_color.a, 0.0, 1.0)
+	)
+
+	var safe_powers: Array[String] = []
+	var raw_powers: Variant = info.get("powers", [])
+	for _slot_index in range(MAX_EQUIPPED_POWERS):
+		safe_powers.append("")
+	if raw_powers is Array:
+		for slot_index in range(min(raw_powers.size(), MAX_EQUIPPED_POWERS)):
+			var power: Variant = raw_powers[slot_index]
+			if power is String and VALID_POWERS.has(power) and not safe_powers.has(power):
+				safe_powers[slot_index] = power
+
+	return {
+		"name": safe_name,
+		"color": safe_color,
+		"powers": safe_powers,
+		"ready": true
+	}
 
 @rpc("authority", "reliable")
 func _sync_players(updated_players: Dictionary) -> void:
 	# so ts is where the client actually receives the latest syncronizated player roster
 	players = updated_players
 	player_list_changed.emit()
+
+func report_player_death(player_id: int) -> void:
+	# the host tells everybody when a ball is out, so spikes n void zones agree too
+	if not is_in_room():
+		return
+	if is_host:
+		_queue_player_death(player_id)
+	else:
+		_request_player_death.rpc_id(1, player_id)
+
+@rpc("any_peer", "reliable")
+func _request_player_death(player_id: int) -> void:
+	if not is_host:
+		return
+	var sender_id := multiplayer.get_remote_sender_id()
+	# clients can report their own locally detected death, but cant claim a kill
+	# for some other player n force the round to end
+	if sender_id != player_id or not players.has(sender_id):
+		return
+	_queue_player_death(player_id)
+
+func _queue_player_death(player_id: int) -> void:
+	_pending_player_deaths[player_id] = true
+	if _death_batch_scheduled:
+		return
+	_death_batch_scheduled = true
+	call_deferred("_broadcast_pending_player_deaths")
+
+func _broadcast_pending_player_deaths() -> void:
+	_death_batch_scheduled = false
+	if _pending_player_deaths.is_empty() or not is_host:
+		_pending_player_deaths.clear()
+		return
+	var player_ids := PackedInt32Array()
+	for player_id in _pending_player_deaths.keys():
+		player_ids.append(int(player_id))
+	_pending_player_deaths.clear()
+	_sync_player_deaths.rpc(player_ids)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_player_deaths(player_ids: PackedInt32Array) -> void:
+	for player in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(player) and not player.is_queued_for_deletion() and player_ids.has(int(player.get("player_id"))):
+			if player.has_method("apply_authoritative_death"):
+				player.apply_authoritative_death()
 
 func start_game(scene_path: String = "res://Areas/Grass1.tscn") -> void:
 	if not is_host:
@@ -234,6 +434,93 @@ func change_level(scene_path: String) -> void:
 @rpc("authority", "call_local", "reliable")
 func _load_match_scene(scene_path: String) -> void:
 	# tell everyone in the lobby to load into the arena at the same time
+	is_match_active = true
 	print("Loading scene: ", scene_path, " (is_host: ", is_host, ", peer_id: ", multiplayer.get_unique_id(), ")")
 	match_started.emit()
 	get_tree().change_scene_to_file(scene_path)
+
+func broadcast_blast(blast_position: Vector2, blast_radius: float, victim_ids: PackedInt32Array, bomb_id: String) -> void:
+	# host picks who got caught so every screen agrees on the same deaths
+	if not is_host:
+		return
+	var knockback_ids := PackedInt32Array()
+	for player in get_tree().get_nodes_in_group("player"):
+		if not is_instance_valid(player) or player.is_queued_for_deletion():
+			continue
+		if "is_dead" in player and player.is_dead:
+			continue
+		var player_id: int = int(player.get("player_id"))
+		if not victim_ids.has(player_id) and player.global_position.distance_to(blast_position) <= blast_radius * BLAST_KNOCKBACK_RADIUS_SCALE:
+			knockback_ids.append(player_id)
+	_apply_blast.rpc(blast_position, blast_radius, victim_ids, knockback_ids, bomb_id)
+
+@rpc("authority", "call_local", "reliable")
+func _apply_blast(blast_position: Vector2, blast_radius: float, victim_ids: PackedInt32Array, knockback_ids: PackedInt32Array, bomb_id: String) -> void:
+	# make every peer play the same boom and apply the host's result
+	if not bomb_id.is_empty():
+		_remember_resolved_bomb(bomb_id)
+	_spawn_blast_visual(blast_position, blast_radius)
+	for bomb in get_tree().get_nodes_in_group("bomb"):
+		if is_instance_valid(bomb) and bomb.get("bomb_id") == bomb_id:
+			bomb.queue_free()
+
+	for player in get_tree().get_nodes_in_group("player"):
+		if not is_instance_valid(player) or player.is_queued_for_deletion():
+			continue
+		var player_id: int = int(player.get("player_id"))
+		if victim_ids.has(player_id):
+			if player.has_method("apply_authoritative_death"):
+				player.apply_authoritative_death()
+		elif knockback_ids.has(player_id) and player.get("is_local_player") and player.has_method("apply_blast_knockback"):
+			player.apply_blast_knockback(blast_position, blast_radius * BLAST_KNOCKBACK_RADIUS_SCALE, BLAST_KNOCKBACK_FORCE)
+
+func _spawn_blast_visual(blast_position: Vector2, blast_radius: float) -> void:
+	var scene_root := get_tree().current_scene
+	if not scene_root:
+		return
+	var explosion := Node2D.new()
+	explosion.set_script(ExplosionScript)
+	explosion.radius = blast_radius
+	scene_root.add_child(explosion)
+	explosion.global_position = blast_position
+
+func has_resolved_bomb(bomb_id: String) -> bool:
+	if bomb_id.is_empty():
+		return false
+	var expires_at: int = int(resolved_bomb_expiries.get(bomb_id, 0))
+	if expires_at <= Time.get_ticks_msec():
+		resolved_bomb_expiries.erase(bomb_id)
+		return false
+	return true
+
+func _remember_resolved_bomb(bomb_id: String) -> void:
+	var now_msec: int = Time.get_ticks_msec()
+	for expired_id in resolved_bomb_expiries.keys():
+		if int(resolved_bomb_expiries[expired_id]) <= now_msec:
+			resolved_bomb_expiries.erase(expired_id)
+	resolved_bomb_expiries[bomb_id] = now_msec + 10000
+
+func request_bomb_detonation(bomb_id: String) -> void:
+	# a client may see a collision a frame before the host, so ask the host copy
+	# to pop that same bomb instead of leaving this screen's copy frozen forever
+	if bomb_id.is_empty() or not is_in_room():
+		return
+	if is_host:
+		_detonate_bomb_by_id(bomb_id)
+	else:
+		_request_bomb_detonation.rpc_id(1, bomb_id)
+
+@rpc("any_peer", "reliable")
+func _request_bomb_detonation(bomb_id: String) -> void:
+	if not is_host or bomb_id.is_empty():
+		return
+	var sender_id := multiplayer.get_remote_sender_id()
+	if sender_id <= 1 or not players.has(sender_id):
+		return
+	_detonate_bomb_by_id(bomb_id)
+
+func _detonate_bomb_by_id(bomb_id: String) -> void:
+	for bomb in get_tree().get_nodes_in_group("bomb"):
+		if is_instance_valid(bomb) and not bomb.is_queued_for_deletion() and bomb.get("bomb_id") == bomb_id:
+			bomb.call("_explode")
+			return

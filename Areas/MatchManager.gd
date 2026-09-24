@@ -3,6 +3,9 @@ extends Node2D
 # so ts handles dropping everyone into the match so we can start fighting I think
 
 const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
+const DynamicCameraScript = preload("res://Areas/DynamicCamera.gd")
+const GameplayParallaxScript = preload("res://Areas/GameplayParallaxBackground.gd")
+const PauseMenuScene: PackedScene = preload("res://Menu/PauseMenu.tscn")
 
 ## default spawn pos if you forgot to place marker2d points lol
 @export var default_spawn_position: Vector2 = Vector2(576, 300)
@@ -22,6 +25,9 @@ const INSTRUCTIONS_HOLD_TIME: float = 4.0 # how long controls prompt stays fully
 const INSTRUCTIONS_FADE_TIME: float = 1.0 # how long it takes to fade out after that
 
 var is_round_over: bool = false
+var game_camera: Camera2D
+var round_participant_count: int = 0
+var _match_end_check_pending: bool = false
 
 func _ready() -> void:
 	is_tutorial = scene_file_path.ends_with("Tutorial.tscn")
@@ -31,6 +37,11 @@ func _ready() -> void:
 	add_to_group("gameplay_scene")
 
 	spawn_players()
+	_setup_camera()
+	_setup_background()
+	var pause_menu := PauseMenuScene.instantiate()
+	pause_menu.name = "PauseMenu"
+	add_child(pause_menu)
 
 	_show_move_instructions()
 	if void_zone:
@@ -39,11 +50,56 @@ func _ready() -> void:
 	# listens for when someone ragequits or loses connection
 	multiplayer.peer_disconnected.connect(_on_player_disconnected)
 
+func _setup_camera() -> void:
+	# keeps everyone alive in frame n zooms out when they spread apart
+	game_camera = Camera2D.new()
+	game_camera.name = "DynamicCamera"
+	game_camera.set_script(DynamicCameraScript)
+	add_child(game_camera)
+
+func _setup_background() -> void:
+	# menus keep the global bg, matches use the camera-aware one in the map
+	var old_bg := get_node_or_null("/root/Background")
+	if old_bg:
+		old_bg.visible = false
+
+	# MapTemplate already owns this node. only make one for older maps that
+	# dont have it yet, otherwise every match gets two full backgrounds
+	var parallax_bg := get_node_or_null("GameplayBackground")
+	if not parallax_bg:
+		parallax_bg = Node2D.new()
+		parallax_bg.name = "GameplayBackground"
+		parallax_bg.set_script(GameplayParallaxScript)
+		add_child(parallax_bg)
+	move_child(parallax_bg, 0)
+
+func _exit_tree() -> void:
+	# turn the menu bg back on when this match goes away
+	var old_bg := get_node_or_null("/root/Background")
+	if old_bg:
+		old_bg.visible = true
+
 func _show_move_instructions() -> void:
-	# quick how to play text for new players so it fades out n doesnt clutter the screen
+	# keep the tutorial cheat sheet around so nobody has to memorize the whole game lol
 	if not instructions_label:
 		return
 	instructions_label.modulate.a = 1.0
+	if is_tutorial:
+		var mobile_controls = get_node_or_null("/root/MobileControls")
+		var touch_mode: bool = mobile_controls != null and mobile_controls.is_mobile_active
+		instructions_label.offset_left = 96.0
+		instructions_label.offset_right = -20.0
+		instructions_label.offset_top = 18.0
+		instructions_label.offset_bottom = 228.0
+		instructions_label.add_theme_font_size_override("font_size", 16 if touch_mode else 21)
+		instructions_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		instructions_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		if touch_mode:
+			instructions_label.text = "Move: left joystick     Jump: UP button\nDash: tap Dash for a fast burst\nSpiky: tap Spiky; touch rivals to pop them (3.5s; steering/jump locked)\nBomb: hold Bomb icon; aim with joystick; release to throw (3.5s fuse)\nOnly equipped power buttons show; powers cool down for 2s"
+		else:
+			instructions_label.text = "Move: A / D or ← / →     Jump: W / Space / ↑\nDash: Shift / J     Spiky: E / F / K (3.5s; touch rivals to pop them)\nSpiky locks steering, jumping and dashing while active\nBomb: hold Q to cook, release to throw (3.5s fuse)\nLeft / Middle / Right click trigger power slots 1 / 2 / 3; 2s cooldowns"
+		return
+
 	var tween := create_tween()
 	tween.tween_interval(INSTRUCTIONS_HOLD_TIME)
 	tween.tween_property(instructions_label, "modulate:a", 0.0, INSTRUCTIONS_FADE_TIME)
@@ -82,10 +138,6 @@ func get_spawn_position(index: int) -> Vector2:
 	return default_spawn_position
 
 func spawn_players() -> void:
-	# fresh match reset so dead bodies dont keep stacking up every rematch I think
-	var PlayerScript = preload("res://Areas/Player.gd")
-	PlayerScript.dead_count = 0
-
 	if not players_container:
 		players_container = get_node_or_null("Players")
 		if not players_container:
@@ -96,6 +148,7 @@ func spawn_players() -> void:
 	# clear out old player nodes lying around from last time
 	for child in players_container.get_children():
 		child.queue_free()
+	round_participant_count = 0
 
 	if NetworkManagerScript.players.size() > 0:
 		# spawns everyone from the lobby if playing multi
@@ -109,6 +162,7 @@ func spawn_players() -> void:
 			var powers = p_info.get("powers", ["dash"])
 			player.setup_player(peer_id, p_info.get("name", "Player"), p_info.get("color", Color.WHITE), powers)
 			player.player_died.connect(_on_player_died)
+			round_participant_count += 1
 			spawn_index += 1
 	else:
 		# solo mode testing so the game doesnt crash when u run the scene directly
@@ -118,6 +172,7 @@ func spawn_players() -> void:
 		players_container.add_child(player)
 		player.setup_player(1, PlayerData.player_name, PlayerData.skin_color, PlayerData.equipped_powers)
 		player.player_died.connect(_on_player_died)
+		round_participant_count = 1
 
 func _on_player_died(_dead_player_id: int) -> void:
 	if is_tutorial:
@@ -130,6 +185,12 @@ func _on_player_died(_dead_player_id: int) -> void:
 		return
 
 	# checks whos still surviving to figure out the winner n go to next level
+	if not _match_end_check_pending:
+		_match_end_check_pending = true
+		call_deferred("_run_match_end_check")
+
+func _run_match_end_check() -> void:
+	_match_end_check_pending = false
 	_check_match_end()
 
 func _check_match_end() -> void:
@@ -139,18 +200,16 @@ func _check_match_end() -> void:
 	var alive_players: Array = []
 	if players_container:
 		for child in players_container.get_children():
-			if "is_dead" in child and not child.is_dead:
+			if is_instance_valid(child) and not child.is_queued_for_deletion() and "is_dead" in child and not child.is_dead:
 				alive_players.append(child)
 
-	var total_players: int = players_container.get_child_count() if players_container else 0
-
 	# so ts checks if only 1 guy is left standing to trigger the win screen
-	if alive_players.size() == 1 and total_players > 1:
+	if alive_players.size() == 1 and round_participant_count > 1:
 		is_round_over = true
 		var winner = alive_players[0]
 		var winner_name: String = winner.player_display_name if "player_display_name" in winner else "Player"
 		_handle_round_won(winner_name)
-	elif alive_players.size() == 0 and total_players > 0:
+	elif alive_players.is_empty() and round_participant_count > 0:
 		is_round_over = true
 		_handle_round_won("NOBODY")
 
@@ -160,22 +219,22 @@ func _handle_round_won(winner_name: String) -> void:
 	advance_to_next_level()
 
 func advance_to_next_level() -> void:
-	# revives everyone for the next round i think
-	var PlayerScript = preload("res://Areas/Player.gd")
-	PlayerScript.dead_count = 0
-	is_round_over = false
-
 	var next_path: String = get_next_level_path()
 	var network_mgr = get_node_or_null("/root/NetworkManager")
 	if not network_mgr:
 		network_mgr = NetworkManagerScript.instance
 
-	if network_mgr and NetworkManagerScript.is_host and NetworkManagerScript.is_in_room():
+	if NetworkManagerScript.is_in_room():
+		# clients wait for the host's scene rpc so rounds cant drift apart
+		if not network_mgr or not NetworkManagerScript.is_host:
+			return
+		is_round_over = false
 		print("Host changing level to: ", next_path)
 		# tiny delay so the clients dont get desynced while it loads
 		await get_tree().create_timer(0.1).timeout
 		network_mgr.change_level(next_path)
 	else:
+		is_round_over = false
 		get_tree().change_scene_to_file(next_path)
 
 func get_next_level_path() -> String:
@@ -225,10 +284,14 @@ func _show_winner_banner(winner_name: String) -> void:
 func _on_player_disconnected(peer_id: int) -> void:
 	# removes the disconnected player node instantly so we dont get a ghost body stuck around
 	print("MatchManager: Player ", peer_id, " disconnected, removing from scene")
-	
+	if not is_instance_valid(players_container):
+		players_container = get_node_or_null("Players")
+	if not players_container:
+		return
+
 	# finds n frees the dc'd player node
 	for player in players_container.get_children():
-		if player.has_method("get") and player.get("player_id") == peer_id:
+		if is_instance_valid(player) and not player.is_queued_for_deletion() and player.get("player_id") == peer_id:
 			print("Removing player node: ", player.name)
 			player.queue_free()
 			break

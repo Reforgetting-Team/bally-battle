@@ -4,18 +4,15 @@ extends Node
 
 var player_name: String = "Player"
 var skin_color: Color = Color(0.2, 0.6, 1.0, 1.0)
-var equipped_powers: Array = ["dash"]
+var equipped_powers: Array = ["dash", "", ""] # fixed 3 slots now (Left/Middle/Right click), "" = empty slot
 var debug_mode: bool = false # lets u test multiplayer solo n see all the nerd stats
 var save_path: String = "user://player_data.cfg"
 var config: ConfigFile = ConfigFile.new()
 
-# --- graphics settings ---
-# fps_limit: 0 means unlimited (Engine.max_fps also takes 0 as unlimited)
+# graphics stuff, 0 fps means unlimited
 var fps_limit: int = 0
 var vsync_enabled: bool = true
-# window_mode: 0 = windowed, 1 = borderless window, 2 = fullscreen. only
-# actually matters on desktop, mobile/web are always fullscreen anyway so
-# theres no point applying it there (see Settings.gd, it hides the control too)
+# 0 windowed, 1 borderless, 2 fullscreen. phones n web ignore this
 var window_mode: int = 2
 
 func _ready() -> void:
@@ -31,7 +28,10 @@ func load_data() -> void:
 		if config.has_section_key("player", "name"):
 			player_name = config.get_value("player", "name", player_name)
 		if config.has_section_key("player", "equipped_powers"):
-			equipped_powers = config.get_value("player", "equipped_powers", ["dash"])
+			equipped_powers = config.get_value("player", "equipped_powers", ["dash", "", ""])
+			# pad old saves so left/middle/right always have a slot
+			while equipped_powers.size() < 3:
+				equipped_powers.append("")
 		if config.has_section_key("debug", "debug_mode"):
 			debug_mode = config.get_value("debug", "debug_mode", false)
 		if config.has_section_key("graphics", "fps_limit"):
@@ -53,16 +53,14 @@ func save_data() -> void:
 	config.save(save_path)
 
 func apply_graphics_settings() -> void:
-	# actually pushes the saved graphics settings into the engine/display
-	# server, called once at boot n again whenever settings change live
+	# push saved graphics into the game now
 	Engine.max_fps = fps_limit
 
 	DisplayServer.window_set_vsync_mode(
 		DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED
 	)
 
-	# window mode is a desktop-only concept, mobile/web is always fullscreen
-	# n DisplayServer.window_set_mode() is a no-op (or worse, undefined) there
+	# phones n web own their window mode, dont fight the platform
 	if OS.has_feature("mobile") or OS.has_feature("web"):
 		return
 
