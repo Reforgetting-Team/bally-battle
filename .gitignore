@@ -3,6 +3,7 @@
 /android/
 addons/
 Exports/
+/export_presets.cfg
 
 # Junk
 .DS_Store
