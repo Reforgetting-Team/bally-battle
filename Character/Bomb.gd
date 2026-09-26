@@ -6,6 +6,7 @@ signal exploded(explosion_position: Vector2)
 
 const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 const ExplosionScript = preload("res://Character/Explosion.gd")
+const BOUNCE_STREAM: AudioStream = preload("res://Sounds/Tongue.ogg")
 
 @export var explosion_radius: float = 90.0
 
@@ -17,6 +18,7 @@ const BOMB_RADIUS: float = 18.0 # matches the CollisionShape2D's circle radius, 
 # cuz thats what makes bopl's grenade fun -- u bank it off a wall onto some guy
 const BOUNCE_FACTOR: float = 0.52     # how much speed it keeps per bounce
 const MIN_BOUNCE_SPEED: float = 55.0  # slower than ts n it just settles instead of micro-bouncing forever
+const BOUNCE_PITCH_SCALE: float = 1.45 # lighter lil bomb, so its thud sounds higher than bally
 
 # let grounded bombs roll to a natural stop
 const GROUND_FRICTION: float = 260.0
@@ -42,6 +44,7 @@ var _awaiting_authority: bool = false
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var player_hitbox: Area2D = get_node_or_null("PlayerHitbox")
+@onready var bounce_audio: AudioStreamPlayer = $BounceAudio
 
 func _ready() -> void:
 	add_to_group("bomb")
@@ -57,6 +60,9 @@ func _ready() -> void:
 
 	if sprite:
 		sprite.scale = Vector2(VISUAL_SCALE, VISUAL_SCALE)
+	if bounce_audio:
+		bounce_audio.stream = BOUNCE_STREAM
+		bounce_audio.pitch_scale = BOUNCE_PITCH_SCALE
 
 func launch(from_position: Vector2, throw_velocity: Vector2, thrower_id: int, remaining_fuse: float, identifier: String = "") -> void:
 	global_position = from_position
@@ -151,7 +157,13 @@ func _bounce_off_last_collision(pre_move_velocity: Vector2) -> void:
 	if impact_speed <= MIN_BOUNCE_SPEED:
 		return
 
+	if normal.dot(Vector2.UP) > 0.5:
+		_play_bounce_sound()
 	velocity = pre_move_velocity.bounce(normal) * BOUNCE_FACTOR
+
+func _play_bounce_sound() -> void:
+	if bounce_audio:
+		bounce_audio.play()
 
 func _update_fuse_flash() -> void:
 	# blinks faster the closer it is to popping so u get a heads up to run lol

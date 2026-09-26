@@ -49,6 +49,9 @@ func _ready() -> void:
 	
 	# listens for when someone ragequits or loses connection
 	multiplayer.peer_disconnected.connect(_on_player_disconnected)
+	var network_manager: Node = get_node_or_null("/root/NetworkManager")
+	if network_manager:
+		network_manager.call("report_match_scene_ready")
 
 func _setup_camera() -> void:
 	# keeps everyone alive in frame n zooms out when they spread apart
@@ -95,7 +98,7 @@ func _show_move_instructions() -> void:
 		instructions_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		instructions_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		if touch_mode:
-			instructions_label.text = "Move: left joystick     Jump: UP button\nDash: tap Dash for a fast burst\nSpiky: tap Spiky; touch rivals to pop them (3.5s; steering/jump locked)\nBomb: hold Bomb icon; aim with joystick; release to throw (3.5s fuse)\nOnly equipped power buttons show; powers cool down for 2s"
+			instructions_label.text = "Move: left joystick     Jump: UP button\nDash: tap Dash for a fast burst\nSpiky: tap Spiky; touch rivals to pop them (3.5s; steering/jump locked)\nBomb: hold Bomb icon; aim with joystick; release to throw (3.5s fuse)\nOnly equipped power buttons show; powers cool down for 2s\nKeyboard if connected: A/D move, W/Space jump, Shift/J Dash, E/F/K Spiky, Q Bomb\nMouse if connected: left/middle/right use slots; move mouse to aim Bomb"
 		else:
 			instructions_label.text = "Move: A / D or ← / →     Jump: W / Space / ↑\nDash: Shift / J     Spiky: E / F / K (3.5s; touch rivals to pop them)\nSpiky locks steering, jumping and dashing while active\nBomb: hold Q to cook, release to throw (3.5s fuse)\nLeft / Middle / Right click trigger power slots 1 / 2 / 3; 2s cooldowns"
 		return
@@ -154,13 +157,22 @@ func spawn_players() -> void:
 		# spawns everyone from the lobby if playing multi
 		var spawn_index: int = 0
 		for peer_id in NetworkManagerScript.players.keys():
-			var p_info = NetworkManagerScript.players[peer_id]
+			var p_info: Dictionary = NetworkManagerScript.players[peer_id]
+			var player_id: int = int(peer_id)
+			var player_name: String = str(p_info.get("name", "Player"))
+			var player_color: Color = p_info.get("color", Color.WHITE)
+			var powers: Array = p_info.get("powers", ["dash"])
 			var player = player_scene.instantiate()
-			player.name = str(peer_id)
+			player.name = str(player_id)
 			player.position = get_spawn_position(spawn_index)
+			# ready runs inside add_child, so give the player its real ID/loadout
+			# first or every new peer briefly looks like host 1 with only Dash.
+			player.player_id = player_id
+			player.player_display_name = player_name
+			player.player_color = player_color
+			player.equipped_powers = powers.duplicate()
 			players_container.add_child(player)
-			var powers = p_info.get("powers", ["dash"])
-			player.setup_player(peer_id, p_info.get("name", "Player"), p_info.get("color", Color.WHITE), powers)
+			player.setup_player(player_id, player_name, player_color, powers)
 			player.player_died.connect(_on_player_died)
 			round_participant_count += 1
 			spawn_index += 1

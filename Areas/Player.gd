@@ -38,6 +38,7 @@ const BOUNCE_STREAM: AudioStream = preload("res://Sounds/Tongue.ogg")
 @export var player_id: int = 1
 @export var player_color: Color = Color.WHITE
 @export var player_display_name: String = "Player"
+@export var is_tutorial_dummy: bool = false
 
 signal player_died(player_id: int)
 
@@ -155,7 +156,10 @@ func _has_network_peer() -> bool:
 
 func _ready() -> void:
 	# gotta figure out if this ball is ours or some other dude's online
-	if _has_network_peer():
+	if is_tutorial_dummy:
+		# tutorial targets act like bodies, not like another controller
+		is_local_player = false
+	elif _has_network_peer():
 		is_local_player = (player_id == multiplayer.get_unique_id())
 		set_multiplayer_authority(player_id)
 	else:
@@ -202,13 +206,12 @@ func _find_mobile_controls() -> void:
 	mobile_controls = get_node_or_null("/root/MobileControls") as MobileControlsPanel
 	
 	# make the buttons match the player color so it feels cohesive
-	if mobile_controls:
+	if mobile_controls and is_local_player:
 		mobile_controls.set_button_colors(player_color)
 		# n only show the power buttons (dash/spiky) we actually equipped or
 		# smth, but ONLY for our own ball, dont want some remote guy's
 		# loadout messing w our buttons
-		if is_local_player:
-			mobile_controls.set_equipped_powers(equipped_powers)
+		mobile_controls.set_equipped_powers(equipped_powers)
 
 
 
@@ -274,7 +277,7 @@ func _finish_death() -> void:
 	if is_holding_bomb:
 		is_holding_bomb = false
 		_hide_bomb_hold_visual()
-		if is_local_player and _has_network_peer():
+		if is_local_player and _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 			_sync_bomb_hold.rpc(false)
 	if wind_trail and wind_trail.has_method("stop_trail"):
 		wind_trail.stop_trail()
@@ -308,14 +311,19 @@ func _finish_death() -> void:
 	if death_audio and death_audio.stream:
 		death_audio.play()
 
-	# stick around silently for a beat so the text/sound actually register,
-	# then gone for good
+	# stick around silently for a beat so the text/sound actually register
 	await get_tree().create_timer(1.0).timeout
+	_on_death_cleanup_complete()
+
+func _on_death_cleanup_complete() -> void:
+	# regular players are done here; tutorial dummies override this n pop back in
 	queue_free()
 
 func _physics_process(delta: float) -> void:
 	# dead balls dont do anything anymore, just sit there as text til they're freed
 	if is_dead:
+		return
+	if NetworkManagerScript.is_scene_transitioning:
 		return
 
 	# if this aint our ball, let the network sync move it instead, we just
@@ -430,11 +438,16 @@ func _physics_process(delta: float) -> void:
 	for slot_index in range(min(equipped_powers.size(), 3)):
 		var slot_action := "power_slot_%d" % (slot_index + 1)
 		var slot_power: String = equipped_powers[slot_index]
-		# phone taps can also arrive as left mouse clicks, so dont let any tap
-		# on the screen accidentally fire slot one instead of its touch button lol
-		if not mobile_active and not match_menu_open and Input.is_action_just_pressed(slot_action):
+		var mouse_slot_pressed := Input.is_action_just_pressed(slot_action)
+		var mouse_slot_released := Input.is_action_just_released(slot_action)
+		if mobile_active:
+			# real mouse clicks work on phones too; touch-emulated clicks stay with
+			# the on-screen buttons so a random tap doesnt fire slot one lol
+			mouse_slot_pressed = mobile_controls.consume_mouse_slot_just_pressed(slot_index)
+			mouse_slot_released = mobile_controls.consume_mouse_slot_just_released(slot_index)
+		if not match_menu_open and mouse_slot_pressed:
 			_try_power(slot_power, input_x)
-		if not mobile_active and slot_power == "bomb" and Input.is_action_just_released(slot_action):
+		if slot_power == "bomb" and mouse_slot_released:
 			_release_bomb()
 
 	# bomb hold ticking: startup windup counts down, n if u greedily hold it
@@ -445,7 +458,7 @@ func _physics_process(delta: float) -> void:
 			bomb_startup_frames_remaining -= 1
 		bomb_hold_timer += delta
 
-		if mobile_active:
+		if mobile_active and not mobile_controls.has_physical_mouse_input():
 			# joystick points the held bomb around its little orbit on phones
 			var joystick_aim: Vector2 = mobile_controls.get_joystick_vector()
 			if joystick_aim.length() > 0.15:
@@ -506,7 +519,7 @@ func _physics_process(delta: float) -> void:
 	# hop. uses the SAME jump_held snapshot from the top of this frame, no
 	# second read here, thats on purpose so it stays in sync w what actually happened
 	if is_on_floor() and pre_move_vel.y > min_bounce_speed:
-		if jump_held:
+		if jump_held and not is_spiky and not is_holding_bomb:
 			# still holding jump while landing? skip the bounce n just jump again
 			velocity.y = jump_velocity
 			bounce_volume_db = 0.0
@@ -531,7 +544,7 @@ func _physics_process(delta: float) -> void:
 	# so ts makes like so the player position gets syncronizated across everyone
 	# else's screen too, basically we just spam our transform out over rpc so
 	# the other clients see us rolling around in real time n it doesnt look laggy
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_transform.rpc(global_position, sprite.rotation if sprite else 0.0, velocity, bomb_aim_dir)
 
 func _remote_interpolate(delta: float) -> void:
@@ -607,7 +620,7 @@ func _try_dash(input_x: float) -> void:
 	_start_dash(dir)
 
 	# tell the lobby boys we just dashed so they see the wind trail too
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_dash.rpc(dash_direction)
 
 @rpc("reliable")
@@ -640,7 +653,7 @@ func _stop_dash() -> void:
 	# gotta tell the lobby boys the dash is over too or smth, otherwise their
 	# copy of our ball never hears about it (remote balls skip the local dash
 	# timer entirely, see _physics_process up top) n the trail just sits there forever lol
-	if is_local_player and _has_network_peer():
+	if is_local_player and _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_dash_stop.rpc()
 
 @rpc("reliable")
@@ -682,7 +695,7 @@ func _try_spiky() -> void:
 	_start_spiky()
 
 	# tell everyone in the lobby we just sprouted spikes lmao
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_spiky.rpc(true)
 
 @rpc("reliable")
@@ -695,6 +708,9 @@ func _sync_spiky(active: bool) -> void:
 		_stop_spiky()
 
 func _start_spiky() -> void:
+	# dont let an old dash keep steering the ball once the spikes are out
+	if is_dashing:
+		_stop_dash()
 	is_spiky = true
 	spiky_time_remaining = SPIKY_DURATION
 	spiky_cooldown_timer = SPIKY_COOLDOWN
@@ -715,7 +731,7 @@ func _stop_spiky() -> void:
 	if spike_hitbox:
 		spike_hitbox.monitoring = false
 
-	if is_local_player and _has_network_peer():
+	if is_local_player and _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_spiky.rpc(false)
 
 func _try_power(power_name: String, input_x: float) -> void:
@@ -745,7 +761,7 @@ func _try_bomb() -> void:
 
 	_show_bomb_hold_visual()
 
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_bomb_hold.rpc(true)
 
 @rpc("reliable")
@@ -794,7 +810,7 @@ func _release_bomb() -> void:
 	bomb_cooldown_timer = BOMB_COOLDOWN
 	_hide_bomb_hold_visual()
 
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_bomb_hold.rpc(false)
 
 	if is_dead:
@@ -822,7 +838,7 @@ func _release_bomb() -> void:
 
 	_spawn_bomb(spawn_pos, throw_velocity, remaining_fuse, bomb_id)
 
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_spawn_bomb_remote.rpc(spawn_pos, throw_velocity, remaining_fuse, bomb_id)
 
 func _detonate_held_bomb() -> void:
@@ -830,13 +846,13 @@ func _detonate_held_bomb() -> void:
 	is_holding_bomb = false
 	bomb_cooldown_timer = BOMB_COOLDOWN
 	_hide_bomb_hold_visual()
-	if is_local_player and _has_network_peer():
+	if is_local_player and _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_bomb_hold.rpc(false)
 
 	# cook it all the way and let the blast decide who gets caught
 	var bomb_id := _make_bomb_id()
 	_spawn_bomb(blast_position, Vector2.ZERO, 0.0, bomb_id)
-	if _has_network_peer():
+	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_spawn_bomb_remote.rpc(blast_position, Vector2.ZERO, 0.0, bomb_id)
 
 func _make_bomb_id() -> String:

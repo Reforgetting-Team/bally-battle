@@ -5,6 +5,31 @@
 [ext_resource type="Texture2D" uid="uid://cr6fhnf3pteow" path="res://Menu/Dash.png" id="2_dash"]
 [ext_resource type="Texture2D" uid="uid://c161i22qt0n2l" path="res://Menu/Spiky.png" id="3_spiky"]
 [ext_resource type="Texture2D" uid="uid://dbnuhyasj0tr8" path="res://Menu/Bomb.png" id="4_bomb"]
+[ext_resource type="Texture2D" path="res://UI/Buttons.png" id="5_buttons"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_base"]
+bg_color = Color(0.38, 0.56, 0.91, 0.68)
+border_color = Color(0, 0, 0, 1)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_knob"]
+bg_color = Color(0.72, 0.83, 1, 0.94)
+border_color = Color(0, 0, 0, 1)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_jump"]
 size = Vector2(80, 80)
@@ -35,10 +60,10 @@ grow_vertical = 2
 theme = ExtResource("2_32t8d")
 
 [node name="Background" type="Panel" parent="JoystickBase" unique_id=1568736600]
-modulate = Color(1, 1, 1, 0.4)
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_base")
 theme = ExtResource("2_32t8d")
 
 [node name="Knob" type="Control" parent="JoystickBase" unique_id=518631906]
@@ -51,13 +76,13 @@ offset_bottom = 35.0
 theme = ExtResource("2_32t8d")
 
 [node name="KnobPanel" type="Panel" parent="JoystickBase/Knob" unique_id=1129408512]
-modulate = Color(1, 1, 1, 0.7)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_knob")
 theme = ExtResource("2_32t8d")
 
 [node name="JumpButton" type="TouchScreenButton" parent="." unique_id=734518229]
@@ -66,14 +91,15 @@ shape = SubResource("RectangleShape2D_jump")
 action = "jump"
 visibility_mode = 1
 
-[node name="Visual" type="ColorRect" parent="JumpButton" unique_id=1836238651]
-modulate = Color(1, 1, 1, 0.7)
+[node name="Visual" type="TextureRect" parent="JumpButton" unique_id=1836238651]
 offset_left = -40.0
 offset_top = -40.0
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
-color = Color(0.2, 0.8, 0.2, 0.7)
+texture = ExtResource("5_buttons")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Label" type="Label" parent="JumpButton/Visual" unique_id=1563318467]
 layout_mode = 0
@@ -90,14 +116,15 @@ shape = SubResource("RectangleShape2D_dash")
 action = "dash"
 visibility_mode = 1
 
-[node name="Visual" type="ColorRect" parent="DashButton" unique_id=1762720384]
-modulate = Color(1, 1, 1, 0.7)
+[node name="Visual" type="TextureRect" parent="DashButton" unique_id=1762720384]
 offset_left = -40.0
 offset_top = -40.0
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
-color = Color(0.8, 0.5, 0.2, 0.7)
+texture = ExtResource("5_buttons")
+expand_mode = 1
+stretch_mode = 5
 metadata/_edit_use_anchors_ = true
 
 [node name="Icon" type="TextureRect" parent="DashButton/Visual" unique_id=1795415924]
@@ -117,14 +144,15 @@ shape = SubResource("RectangleShape2D_spiky")
 action = "spiky"
 visibility_mode = 1
 
-[node name="Visual" type="ColorRect" parent="SpikyButton" unique_id=491170732]
-modulate = Color(1, 1, 1, 0.7)
+[node name="Visual" type="TextureRect" parent="SpikyButton" unique_id=491170732]
 offset_left = -40.0
 offset_top = -40.0
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
-color = Color(0.9, 0.2, 0.2, 0.7)
+texture = ExtResource("5_buttons")
+expand_mode = 1
+stretch_mode = 5
 metadata/_edit_use_anchors_ = true
 
 [node name="Icon" type="TextureRect" parent="SpikyButton/Visual" unique_id=1473393442]
@@ -149,14 +177,15 @@ shape = SubResource("RectangleShape2D_bomb")
 action = "bomb"
 visibility_mode = 1
 
-[node name="Visual" type="ColorRect" parent="BombButton" unique_id=-1244205107]
-modulate = Color(1, 1, 1, 0.7)
+[node name="Visual" type="TextureRect" parent="BombButton" unique_id=-1244205107]
 offset_left = -40.0
 offset_top = -40.0
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
-color = Color(0.25, 0.25, 0.28, 0.7)
+texture = ExtResource("5_buttons")
+expand_mode = 1
+stretch_mode = 5
 metadata/_edit_use_anchors_ = true
 
 [node name="Icon" type="TextureRect" parent="BombButton/Visual" unique_id=-1244205106]

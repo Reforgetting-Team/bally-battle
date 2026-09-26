@@ -5,6 +5,8 @@
 [ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="5_cd56c"]
 [ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="6_mv0qv"]
 [ext_resource type="Texture2D" uid="uid://8nw3qgd8r16k" path="res://Character/Character.png" id="7_char"]
+[ext_resource type="Texture2D" uid="uid://vthq02h4rn7o" path="res://Menu/Done.png" id="8_done"]
+[ext_resource type="Texture2D" uid="uid://cqx67j6c6ww01" path="res://Menu/DoneHover.png" id="9_done_hover"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_rsrsk"]
 shader = ExtResource("3_mv0qv")
@@ -80,7 +82,7 @@ texture_hover = ExtResource("6_mv0qv")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="DoneButton" type="Button" parent="Control" unique_id=987654321]
+[node name="DoneButton" type="TextureButton" parent="Control" unique_id=987654321]
 z_index = 10
 layout_mode = 1
 anchors_preset = 7
@@ -88,15 +90,18 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -120.0
-offset_top = -80.0
-offset_right = 120.0
+offset_left = -200.0
+offset_top = -104.0
+offset_right = 200.0
 offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_default_cursor_shape = 2
-theme_override_font_sizes/font_size = 28
-text = "Done"
+texture_normal = ExtResource("8_done")
+texture_pressed = ExtResource("9_done_hover")
+texture_hover = ExtResource("9_done_hover")
+ignore_texture_size = true
+stretch_mode = 0
 
 [connection signal="color_changed" from="Control/CenterContainer/HBoxContainer/ColorPicker" to="Control" method="_on_color_picker_color_changed"]
 [connection signal="pressed" from="Control/Back" to="Control" method="_on_back_pressed"]

@@ -1,5 +1,16 @@
 # changelog
 
+## 1.1.1 — lil fixes n new stuff
+
+we gave the controls and menus a little polish, fixed up some map stuff, and put a practice buddy in the tutorial so u can test powers without waiting for a friend to join.
+
+- **practice dummy:** tutorial targets play the full death pop, then come back with the spawn pop. duplicate them in the tutorial scene to add more.
+- **mobile controls:** round joystick, game-style buttons, and proper mouse support when u plug one in. keyboard still works too.
+- **bombs:** they now make a higher-pitched version of bally's bounce sound when they hit the floor.
+- **the world:** terrain uses the new wider art without clipping, tile collisions are shared and consistent, and the clouds keep drifting across scene changes.
+- **multiplayer:** players get their lobby loadout before they appear, and match scene changes wait for everyone to load in.
+- **menus:** the Done button got the new button art, and the tutorial spells out the controls for both touch and keyboard/mouse.
+
 ## 1.0.0 — hey, we made it
 
 so this is the first stable release of bally battle. the core game loop is in, the menus have their buttons, and you can actually find your friends on the same network now.

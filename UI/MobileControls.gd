@@ -3,6 +3,9 @@ class_name MobileControlsPanel
 
 # mobile touch controls for the ball physics, so ts is basically a virtual joystick + action buttons
 
+const BUTTON_TEXTURE: Texture2D = preload("res://UI/Buttons.png")
+const BUTTON_HOVER_TEXTURE: Texture2D = preload("res://UI/ButtonsHover.png")
+
 @onready var joystick_base: Control = $JoystickBase
 @onready var joystick_knob: Control = $JoystickBase/Knob
 @onready var jump_button: TouchScreenButton = $JumpButton
@@ -14,12 +17,12 @@ class_name MobileControlsPanel
 
 # cache these once instead of get_node_or_null-ing by string every frame,
 # way cheaper n we grab both Visual and Visual/Icon while were at it
-@onready var jump_visual: CanvasItem = jump_button.get_node_or_null("Visual")
-@onready var dash_visual: CanvasItem = dash_button.get_node_or_null("Visual")
-@onready var spiky_visual: CanvasItem = spiky_button.get_node_or_null("Visual")
+@onready var jump_visual: TextureRect = jump_button.get_node_or_null("Visual") as TextureRect
+@onready var dash_visual: TextureRect = dash_button.get_node_or_null("Visual") as TextureRect
+@onready var spiky_visual: TextureRect = spiky_button.get_node_or_null("Visual") as TextureRect
 @onready var dash_icon: CanvasItem = dash_button.get_node_or_null("Visual/Icon")
 @onready var spiky_icon: CanvasItem = spiky_button.get_node_or_null("Visual/Icon")
-@onready var bomb_visual: CanvasItem = get_node_or_null("BombButton/Visual")
+@onready var bomb_visual: TextureRect = get_node_or_null("BombButton/Visual") as TextureRect
 @onready var bomb_icon: CanvasItem = get_node_or_null("BombButton/Visual/Icon")
 
 
@@ -30,6 +33,13 @@ var joystick_vector: Vector2 = Vector2.ZERO
 
 # keeps track of which touch is actually driving the joystick rn
 var active_touches: Dictionary = {}
+
+# keep hardware mouse clicks separate from touch-emulated mouse input, so a
+# connected mouse works without phone taps accidentally firing power slot 1
+var _physical_mouse_seen: bool = false
+var _physical_mouse_slots_pressed: Array[bool] = [false, false, false]
+var _physical_mouse_slots_just_pressed: Array[bool] = [false, false, false]
+var _physical_mouse_slots_just_released: Array[bool] = [false, false, false]
 
 # button press tracking so we can tell when its a fresh "just pressed" n not just held
 var jump_pressed_last_frame: bool = false
@@ -67,7 +77,7 @@ func _ready() -> void:
 	
 	# get the joystick values set up n ready to go
 	joystick_center = joystick_base.global_position + joystick_base.size / 2
-	joystick_radius = joystick_base.size.x / 2.0
+	joystick_radius = maxf((joystick_base.size.x - joystick_knob.size.x) / 2.0, 1.0)
 
 	# sensible default before any Player node checks in w our real equipped
 	# powers or smth (matches whatever we last picked in power selection)
@@ -122,6 +132,7 @@ func _process(_delta: float) -> void:
 	
 	# joystick position mighta changed so gotta recompute the center every frame
 	joystick_center = joystick_base.global_position + joystick_base.size / 2
+	joystick_radius = maxf((joystick_base.size.x - joystick_knob.size.x) / 2.0, 1.0)
 	
 	# update all the button press states
 	_update_button_states()
@@ -130,7 +141,17 @@ func _update_gameplay_visibility() -> void:
 	# only actual gameplay scenes (Grass1-4, Tutorial, etc, see MatchManager)
 	# are tagged w this group or smth, so menus n lobby screens just never match
 	var scene := get_tree().current_scene
-	visible = scene != null and scene.is_in_group("gameplay_scene")
+	var should_show_controls: bool = scene != null and scene.is_in_group("gameplay_scene")
+	if visible and not should_show_controls:
+		_reset_physical_mouse_state()
+	visible = should_show_controls
+
+func _reset_physical_mouse_state() -> void:
+	_physical_mouse_seen = false
+	for slot_index in range(3):
+		_physical_mouse_slots_pressed[slot_index] = false
+		_physical_mouse_slots_just_pressed[slot_index] = false
+		_physical_mouse_slots_just_released[slot_index] = false
 
 
 func _update_button_states() -> void:
@@ -162,6 +183,36 @@ func _input(event: InputEvent) -> void:
 		_handle_touch(event)
 	elif event is InputEventScreenDrag:
 		_handle_drag(event)
+	elif event is InputEventMouseMotion:
+		if event.device != InputEvent.DEVICE_ID_EMULATION:
+			_physical_mouse_seen = true
+	elif event is InputEventMouseButton:
+		_handle_physical_mouse_button(event)
+
+func _handle_physical_mouse_button(event: InputEventMouseButton) -> void:
+	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
+	_physical_mouse_seen = true
+	var slot_index: int = _get_power_slot_for_mouse_button(event.button_index)
+	if slot_index < 0:
+		return
+	if event.pressed:
+		if not _physical_mouse_slots_pressed[slot_index]:
+			_physical_mouse_slots_just_pressed[slot_index] = true
+		_physical_mouse_slots_pressed[slot_index] = true
+	elif _physical_mouse_slots_pressed[slot_index]:
+		_physical_mouse_slots_just_released[slot_index] = true
+		_physical_mouse_slots_pressed[slot_index] = false
+
+func _get_power_slot_for_mouse_button(button_index: int) -> int:
+	match button_index:
+		MOUSE_BUTTON_LEFT:
+			return 0
+		MOUSE_BUTTON_MIDDLE:
+			return 1
+		MOUSE_BUTTON_RIGHT:
+			return 2
+	return -1
 
 func _handle_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
@@ -169,7 +220,7 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		var touch_pos = event.position
 		var dist_to_joystick = touch_pos.distance_to(joystick_center)
 		
-		if dist_to_joystick < joystick_radius * 2.5:  # generous hit area so it feels forgiving
+		if dist_to_joystick < joystick_base.size.x * 1.25:  # keep the big comfy touch area around the round base
 			joystick_touch_index = event.index
 			active_touches[event.index] = "joystick"
 			_update_joystick(touch_pos)
@@ -235,21 +286,39 @@ func is_bomb_just_released() -> bool:
 func is_active() -> bool:
 	return is_mobile_active and visible
 
+func has_physical_mouse_input() -> bool:
+	return _physical_mouse_seen
+
+func consume_mouse_slot_just_pressed(slot_index: int) -> bool:
+	if slot_index < 0 or slot_index >= _physical_mouse_slots_just_pressed.size():
+		return false
+	var was_just_pressed: bool = _physical_mouse_slots_just_pressed[slot_index]
+	_physical_mouse_slots_just_pressed[slot_index] = false
+	return was_just_pressed
+
+func consume_mouse_slot_just_released(slot_index: int) -> bool:
+	if slot_index < 0 or slot_index >= _physical_mouse_slots_just_released.size():
+		return false
+	var was_just_released: bool = _physical_mouse_slots_just_released[slot_index]
+	_physical_mouse_slots_just_released[slot_index] = false
+	return was_just_released
+
 func _update_button_visual_feedback() -> void:
-	# make the buttons pop more opaque when actually held down, lil juice
-	# (using the cached Visual refs from _ready instead of get_node_or_null
-	# every single frame, thats what was chewing up cycles before)
+	# use the game button art, n swap to its hover look while a button is held
 	if jump_visual:
-		jump_visual.modulate.a = 1.0 if jump_pressed_last_frame else 0.7
+		_set_button_visual(jump_visual, jump_pressed_last_frame)
 	
 	if dash_visual:
-		dash_visual.modulate.a = 1.0 if dash_pressed_last_frame else 0.7
+		_set_button_visual(dash_visual, dash_pressed_last_frame)
 	
 	if spiky_visual:
-		spiky_visual.modulate.a = 1.0 if spiky_pressed_last_frame else 0.7
+		_set_button_visual(spiky_visual, spiky_pressed_last_frame)
 
 	if bomb_visual:
-		bomb_visual.modulate.a = 1.0 if bomb_pressed_last_frame else 0.7
+		_set_button_visual(bomb_visual, bomb_pressed_last_frame)
+
+func _set_button_visual(button_visual: TextureRect, is_pressed: bool) -> void:
+	button_visual.texture = BUTTON_HOVER_TEXTURE if is_pressed else BUTTON_TEXTURE
 
 func set_button_colors(player_color: Color) -> void:
 	# so ts tints the button icons to match whatever color the player picked

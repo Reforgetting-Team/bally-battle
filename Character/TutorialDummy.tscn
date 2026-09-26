@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://Character/Player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://Character/TutorialDummy.gd" id="2_script"]
+
+[node name="TutorialDummy" instance=ExtResource("1_player")]
+script = ExtResource("2_script")
+player_color = Color(1, 0.58, 0.28, 1)
+player_display_name = "Practice Dummy"
+is_tutorial_dummy = true
+equipped_powers = []

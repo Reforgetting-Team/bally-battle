@@ -18,11 +18,15 @@ const ExplosionScript = preload("res://Character/Explosion.gd")
 # holding the boys info so we know who is who n what color they picked
 static var players: Dictionary = {}
 static var is_host: bool = false
+static var is_scene_transitioning: bool = false
 static var peer: ENetMultiplayerPeer = null
 static var instance: Node = null
 static var resolved_bomb_expiries: Dictionary = {}
 var _pending_player_deaths: Dictionary = {}
 var _death_batch_scheduled: bool = false
+var _scene_transition_id: int = 0
+var _scene_ready_peers: Dictionary = {}
+var _scene_transition_finish_sent: bool = false
 var _lan_socket: PacketPeerUDP = PacketPeerUDP.new()
 var _lan_socket_ready: bool = false
 var _lan_advertisement_timer: float = 0.0
@@ -228,6 +232,10 @@ func leave_game() -> void:
 		multiplayer.multiplayer_peer = null
 	players.clear()
 	is_host = false
+	is_scene_transitioning = false
+	_scene_transition_id = 0
+	_scene_ready_peers.clear()
+	_scene_transition_finish_sent = false
 	is_match_active = false
 	hosted_port = DEFAULT_PORT
 	player_list_changed.emit()
@@ -319,6 +327,8 @@ func _on_peer_disconnected(id: int) -> void:
 		players.erase(id)
 		_sync_players.rpc(players)
 		player_list_changed.emit()
+		if is_scene_transitioning:
+			call_deferred("_try_finish_match_scene_transition")
 
 @rpc("any_peer", "reliable")
 func _register_player(info: Dictionary) -> void:
@@ -423,21 +433,79 @@ func start_game(scene_path: String = "res://Areas/Grass1.tscn") -> void:
 		return
 	if not can_start_match():
 		return
-	_load_match_scene.rpc(scene_path)
+	_begin_match_scene_transition(scene_path)
 
 func change_level(scene_path: String) -> void:
 	# transitions everybody connected over to the next level in between rounds
 	if not is_host:
 		return
-	_load_match_scene.rpc(scene_path)
+	_begin_match_scene_transition(scene_path)
+
+func _begin_match_scene_transition(scene_path: String) -> void:
+	if is_scene_transitioning:
+		return
+	_scene_transition_id += 1
+	_scene_ready_peers.clear()
+	_scene_transition_finish_sent = false
+	_load_match_scene.rpc(scene_path, _scene_transition_id)
 
 @rpc("authority", "call_local", "reliable")
-func _load_match_scene(scene_path: String) -> void:
-	# tell everyone in the lobby to load into the arena at the same time
+func _load_match_scene(scene_path: String, transition_id: int) -> void:
+	# pause per-player RPCs first so packets dont target nodes after a map is freed
+	if transition_id < _scene_transition_id:
+		return
+	_scene_transition_id = transition_id
+	is_scene_transitioning = true
+	_scene_ready_peers.clear()
+	_scene_transition_finish_sent = false
 	is_match_active = true
 	print("Loading scene: ", scene_path, " (is_host: ", is_host, ", peer_id: ", multiplayer.get_unique_id(), ")")
 	match_started.emit()
-	get_tree().change_scene_to_file(scene_path)
+	await get_tree().create_timer(0.25).timeout
+	if transition_id != _scene_transition_id or not is_scene_transitioning:
+		return
+	var change_error: Error = get_tree().change_scene_to_file(scene_path)
+	if change_error != OK:
+		is_scene_transitioning = false
+		_scene_ready_peers.clear()
+		push_error("Failed to change match scene to %s: %s" % [scene_path, error_string(change_error)])
+
+func report_match_scene_ready() -> void:
+	if not is_scene_transitioning:
+		return
+	var local_peer_id: int = multiplayer.get_unique_id()
+	if is_host:
+		_scene_ready_peers[local_peer_id] = true
+		_try_finish_match_scene_transition()
+	else:
+		_report_match_scene_ready_rpc.rpc_id(1, _scene_transition_id, local_peer_id)
+
+@rpc("any_peer", "reliable")
+func _report_match_scene_ready_rpc(transition_id: int, peer_id: int) -> void:
+	if not is_host or not is_scene_transitioning or transition_id != _scene_transition_id:
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != peer_id or not players.has(sender_id):
+		return
+	_scene_ready_peers[sender_id] = true
+	_try_finish_match_scene_transition()
+
+func _try_finish_match_scene_transition() -> void:
+	if not is_host or not is_scene_transitioning or _scene_transition_finish_sent:
+		return
+	for peer_id in players.keys():
+		if not _scene_ready_peers.has(int(peer_id)):
+			return
+	_scene_transition_finish_sent = true
+	_resume_match_scene.rpc(_scene_transition_id)
+
+@rpc("authority", "call_local", "reliable")
+func _resume_match_scene(transition_id: int) -> void:
+	if transition_id != _scene_transition_id:
+		return
+	is_scene_transitioning = false
+	_scene_ready_peers.clear()
+	_scene_transition_finish_sent = false
 
 func broadcast_blast(blast_position: Vector2, blast_radius: float, victim_ids: PackedInt32Array, bomb_id: String) -> void:
 	# host picks who got caught so every screen agrees on the same deaths
@@ -471,7 +539,7 @@ func _apply_blast(blast_position: Vector2, blast_radius: float, victim_ids: Pack
 		if victim_ids.has(player_id):
 			if player.has_method("apply_authoritative_death"):
 				player.apply_authoritative_death()
-		elif knockback_ids.has(player_id) and player.get("is_local_player") and player.has_method("apply_blast_knockback"):
+		elif knockback_ids.has(player_id) and (bool(player.get("is_local_player")) or bool(player.get("is_tutorial_dummy"))) and player.has_method("apply_blast_knockback"):
 			player.apply_blast_knockback(blast_position, blast_radius * BLAST_KNOCKBACK_RADIUS_SCALE, BLAST_KNOCKBACK_FORCE)
 
 func _spawn_blast_visual(blast_position: Vector2, blast_radius: float) -> void:

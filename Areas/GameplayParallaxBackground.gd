@@ -4,6 +4,7 @@ const CLOUD_GAP: float = 10.0
 const CLOUD_SPEED: float = 18.0
 const DESIGN_WIDTH: float = 1920.0
 const DESIGN_HEIGHT: float = 1080.0
+const TERRAIN_REGION: Rect2 = Rect2(269.0, 959.0, 1383.0, 121.0)
 const FAR_SKY_SCROLL_SCALE := Vector2(0.92, 0.96)
 const MIN_CAMERA_ZOOM: float = 0.45
 const COVERAGE_MULTIPLIER: float = 3.0
@@ -93,7 +94,7 @@ func _ready() -> void:
 
 	terrain_atlas = AtlasTexture.new()
 	terrain_atlas.atlas = TERRAIN_TEXTURE
-	terrain_atlas.region = Rect2(285, 959, 1243, 121)
+	terrain_atlas.region = TERRAIN_REGION
 	terrain_rect = _create_texture_rect("TerrainOverlay", terrain_atlas, bottom_container)
 
 	left_cloud_atlas = AtlasTexture.new()
@@ -116,8 +117,18 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if cloud_step <= 0.0:
 		return
-	cloud_scroll_x = fmod(cloud_scroll_x + CLOUD_SPEED * delta, cloud_step)
+	_sync_cloud_scroll(delta)
 	_update_cloud_positions()
+
+func _sync_cloud_scroll(delta: float) -> void:
+	if cloud_step <= 0.0:
+		return
+	var persistent_background: Node = get_node_or_null("/root/Background")
+	if persistent_background and persistent_background.has_method("get_cloud_scroll_phase"):
+		var shared_phase: float = float(persistent_background.call("get_cloud_scroll_phase"))
+		cloud_scroll_x = fposmod(shared_phase, 1.0) * cloud_step
+	else:
+		cloud_scroll_x = fposmod(cloud_scroll_x + CLOUD_SPEED * delta, cloud_step)
 
 func _create_texture_rect(node_name: String, texture: Texture2D, parent: Node) -> TextureRect:
 	var rect := TextureRect.new()
@@ -186,9 +197,13 @@ func _update_layout() -> void:
 	right_bottom_cloud_rect.size = right_cloud_size
 	right_bottom_cloud_rect.position = Vector2(viewport_size.x - right_cloud_size.x, viewport_size.y - right_cloud_size.y)
 
-	cloud_container.position = Vector2(-coverage_size.x * 0.5, 0.0)
-	cloud_container.size = coverage_size
-	_rebuild_top_clouds(coverage_size, scale_factor)
+	# this CanvasLayer stays in screen space, so use the same cloud layout as the
+	# persistent menu background instead of resetting their phase across maps
+	cloud_container.position = Vector2.ZERO
+	cloud_container.size = viewport_size
+	_rebuild_top_clouds(viewport_size, scale_factor)
+	_sync_cloud_scroll(0.0)
+	_update_cloud_positions()
 
 func _rebuild_top_clouds(coverage_size: Vector2, scale_factor: float) -> void:
 	for child in cloud_container.get_children():

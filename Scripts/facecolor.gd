@@ -8,7 +8,7 @@ const NetworkManagerScript = preload("res://Scripts/NetworkManager.gd")
 @onready var color_picker: ColorPicker = $CenterContainer/HBoxContainer/ColorPicker
 @onready var character_sprite: Sprite2D = $CenterContainer/HBoxContainer/Character/CharacterSprite
 @onready var back_button: TextureButton = $Back
-@onready var done_button: Button = $DoneButton
+@onready var done_button: TextureButton = $DoneButton
 var mat: ShaderMaterial
 
 func _ready() -> void:

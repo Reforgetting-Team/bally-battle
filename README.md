@@ -38,7 +38,7 @@ Use the on-screen joystick to move and aim a held bomb. Use the on-screen button
 
 ## Downloads
 
-The 1.0.0 release includes builds for Linux x86_64, Windows x86_64, and Android.
+The 1.1.1 release includes builds for Linux x86_64, Windows x86_64, and Android.
 
 [Download Bally Battle](https://github.com/Reforgetting-Team/bally-battle/releases/latest)
 

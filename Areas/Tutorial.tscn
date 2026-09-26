@@ -1,43 +1,11 @@
 [gd_scene format=4 uid="uid://d14pm2rqa5sot"]
 
 [ext_resource type="Script" uid="uid://c6s0vwyapvev8" path="res://Areas/MatchManager.gd" id="1_match"]
-[ext_resource type="Texture2D" uid="uid://c2as7teol0gsq" path="res://Areas/DefaultTileSheet.png" id="3_3rw6v"]
 [ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="4_back"]
+[ext_resource type="TileSet" path="res://Areas/DefaultTileSet.tres" id="4_default_tiles"]
 [ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="5_back_hover"]
-[ext_resource type="Script" path="res://Menu/Back.gd" id="6_back_script"]
-
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tkhtv"]
-texture = ExtResource("3_3rw6v")
-texture_region_size = Vector2i(128, 128)
-0:0/0 = 0
-0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-1:0/0 = 0
-1:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-2:0/0 = 0
-2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-3:0/0 = 0
-3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-0:1/0 = 0
-0:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-1:1/0 = 0
-1:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-2:1/0 = 0
-2:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-3:1/0 = 0
-3:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-0:2/0 = 0
-0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-1:2/0 = 0
-1:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-2:2/0 = 0
-2:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-3:2/0 = 0
-3:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-
-[sub_resource type="TileSet" id="TileSet_8mp7d"]
-tile_size = Vector2i(128, 128)
-physics_layer_0/collision_layer = 1
-sources/2 = SubResource("TileSetAtlasSource_tkhtv")
+[ext_resource type="Script" uid="uid://bx81hrqu28a2y" path="res://Menu/Back.gd" id="6_back_script"]
+[ext_resource type="PackedScene" path="res://Character/TutorialDummy.tscn" id="7_tutorial_dummy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_2ykas"]
 size = Vector2(30000, 400)
@@ -48,11 +16,27 @@ script = ExtResource("1_match")
 [node name="GroundLayer" type="TileMapLayer" parent="." unique_id=98935342]
 position = Vector2(0, 32.999996)
 scale = Vector2(0.8, 0.8)
-tile_map_data = PackedByteArray("AAADAAUAAgACAAAAAAAHAAUAAgADAAAAAAAEAAUAAgAAAAAAAAAFAAUAAgAAAAAAAAAGAAUAAgAAAAAAAAADAAYAAgACAAIAAAAHAAYAAgADAAIAAAAEAAYAAgAAAAAAADAFAAYAAgAAAAAAADAGAAYAAgAAAAAAADABAAQAAgADAAAAAAAAAAQAAgAAAAAAAAD//wQAAgAAAAAAAAAJAAQAAgACAAAAAAAKAAQAAgAAAAAAAAALAAQAAgAAAAAAAAAMAAQAAgADAAAAAAD+/wQAAgACAAAAAAD+/wUAAgACAAIAAAABAAUAAgADAAIAAAAMAAUAAgADAAIAAAAJAAUAAgACAAIAAAAKAAUAAgAAAAAAADALAAUAAgAAAAAAADD//wUAAgAAAAAAADAAAAUAAgAAAAAAADA=")
-tile_set = SubResource("TileSet_8mp7d")
+tile_map_data = PackedByteArray("AAADAAUAAgACAAAAAAAHAAUAAgADAAAAAAAEAAUAAgAAAAAAAAAFAAUAAgAAAAAAAAAGAAUAAgAAAAAAAAADAAYAAgACAAIAAAAHAAYAAgADAAIAAAAEAAYAAgAAAAAAADAFAAYAAgAAAAAAADAGAAYAAgAAAAAAADABAAQAAgADAAAAAAAAAAQAAgAAAAAAAAD//wQAAgAAAAAAAAAJAAQAAgACAAAAAAAKAAQAAgAAAAAAAAALAAQAAgAAAAAAAAAMAAQAAgADAAAAAAD+/wQAAgACAAAAAAD+/wUAAgACAAIAAAABAAUAAgADAAIAAAAMAAUAAgADAAIAAAAJAAUAAgACAAIAAAAKAAUAAgAAAAAAADALAAUAAgAAAAAAADD//wUAAgAAAAAAADAAAAUAAgAAAAAAADD8/wMAAgAAAAMAAAAOAAMAAgAAAAMAAAAQAAUAAgAEAAEAAAAQAAYAAgAEAAEAAAD6/wUAAgAEAAEAAAD6/wYAAgAEAAEAAAD6/wcAAgABAAIAAAAQAAcAAgABAAIAAAD6/wQAAgAAAAEAAAAQAAQAAgAAAAEAAAA=")
+tile_set = ExtResource("4_default_tiles")
 
 [node name="Players" type="Node2D" parent="." unique_id=1885877209]
 z_index = 1
+
+[node name="PracticeDummies" type="Node2D" parent="." unique_id=154686786]
+z_index = 1
+position = Vector2(175, -111)
+
+[node name="PracticeDummy" parent="PracticeDummies" unique_id=557039974 instance=ExtResource("7_tutorial_dummy")]
+position = Vector2(912, 509)
+respawn_delay = 0.6
+
+[node name="PracticeDummies" type="Node2D" parent="PracticeDummies" unique_id=1251615161]
+z_index = 1
+position = Vector2(-1035, 0)
+
+[node name="PracticeDummy" parent="PracticeDummies/PracticeDummies" unique_id=721480566 instance=ExtResource("7_tutorial_dummy")]
+position = Vector2(912, 509)
+respawn_delay = 0.6
 
 [node name="VoidZone" type="Area2D" parent="." unique_id=1182059153]
 collision_layer = 0
@@ -75,20 +59,23 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 19
-text = "Move: left joystick | Jump: UP\nDash: tap Dash icon to burst\nSpiky: tap Spiky to pop rivals on touch (3.5s)\nBomb: hold Bomb icon to cook; release to throw\nEquipped powers only | 2s cooldown"
+text = "Move: left joystick | Jump: UP
+Dash: tap Dash icon to burst
+Spiky: tap Spiky to pop rivals on touch (3.5s)
+Bomb: hold Bomb icon to cook; release to throw
+Equipped powers only | 2s cooldown
+Keyboard/mouse also work if connected"
 horizontal_alignment = 1
-vertical_alignment = 0
 autowrap_mode = 2
 
-[node name="BackButton" type="TextureButton" parent="HUD"]
+[node name="BackButton" type="TextureButton" parent="HUD" unique_id=1228519359]
 z_index = 10
-layout_mode = 1
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 84.0
 offset_bottom = 84.0
-mouse_default_cursor_shape = 2
 tooltip_text = "Back to main menu"
+mouse_default_cursor_shape = 2
 texture_normal = ExtResource("4_back")
 texture_pressed = ExtResource("5_back_hover")
 texture_hover = ExtResource("5_back_hover")

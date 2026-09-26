@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "godot-ai": {
+      "command": "/home/arthur/.local/bin/uvx",
+      "args": [
+        "--isolated",
+        "--no-config",
+        "--no-env-file",
+        "--no-sources",
+        "--no-build",
+        "--index-strategy",
+        "first-index",
+        "--keyring-provider",
+        "disabled",
+        "--index",
+        "https://pypi.org/simple",
+        "--default-index",
+        "https://pypi.org/simple",
+        "--find-links",
+        "https://pypi.org/simple/godot-ai/",
+        "--link-mode",
+        "copy",
+        "--from",
+        "godot-ai==4.1.0",
+        "godot-ai",
+        "attach",
+        "--port",
+        "8000",
+        "--ws-port",
+        "9500"
+      ],
+      "type": "stdio"
+    }
+  }
+}

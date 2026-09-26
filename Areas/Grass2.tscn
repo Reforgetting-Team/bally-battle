@@ -1,40 +1,7 @@
 [gd_scene format=4 uid="uid://be5gj10dbwh2x"]
 
 [ext_resource type="Script" uid="uid://c6s0vwyapvev8" path="res://Areas/MatchManager.gd" id="1_ree5f"]
-[ext_resource type="Texture2D" uid="uid://c2as7teol0gsq" path="res://Areas/DefaultTileSheet.png" id="2_13dsy"]
-
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tkhtv"]
-texture = ExtResource("2_13dsy")
-texture_region_size = Vector2i(128, 128)
-0:0/0 = 0
-0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-1:0/0 = 0
-1:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-2:0/0 = 0
-2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-3:0/0 = 0
-3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-0:1/0 = 0
-0:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-1:1/0 = 0
-1:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-2:1/0 = 0
-2:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-3:1/0 = 0
-3:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-0:2/0 = 0
-0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-1:2/0 = 0
-1:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-2:2/0 = 0
-2:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-3:2/0 = 0
-3:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
-
-[sub_resource type="TileSet" id="TileSet_8mp7d"]
-tile_size = Vector2i(128, 128)
-physics_layer_0/collision_layer = 1
-sources/2 = SubResource("TileSetAtlasSource_tkhtv")
+[ext_resource type="TileSet" path="res://Areas/DefaultTileSet.tres" id="4_default_tiles"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ree5f"]
 size = Vector2(30000, 400)
@@ -46,7 +13,7 @@ script = ExtResource("1_ree5f")
 position = Vector2(0, 36.000004)
 scale = Vector2(0.8, 0.8)
 tile_map_data = PackedByteArray("AAABAAUAAgAAAAAAAAACAAUAAgAAAAAAAAADAAUAAgADAAAAAAAJAAUAAgAAAAAAAAAIAAUAAgAAAAAAAAAHAAUAAgACAAAAAAADAAYAAgADAAIAAAAHAAYAAgACAAIAAAABAAYAAgAAAAAAADACAAYAAgAAAAAAADAIAAYAAgAAAAAAADAJAAYAAgAAAAAAADAFAAUAAgABAAIAAAAFAAQAAgAAAAEAAAAKAAUAAgAAAAAAAAALAAUAAgAAAAAAAAAAAAUAAgAAAAAAAAD//wUAAgAAAAAAAAD//wYAAgAAAAAAADAAAAYAAgAAAAAAADAKAAYAAgAAAAAAADALAAYAAgAAAAAAADD+/wUAAgACAAAAAAD+/wYAAgACAAIAAAAMAAUAAgADAAAAAAAMAAYAAgADAAIAAAA=")
-tile_set = SubResource("TileSet_8mp7d")
+tile_set = ExtResource("4_default_tiles")
 
 [node name="Players" type="Node2D" parent="." unique_id=1128429806]
 z_index = 1

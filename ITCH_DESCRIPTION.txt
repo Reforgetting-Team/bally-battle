@@ -1,0 +1,35 @@
+BALLY BATTLE
+
+A fast, casual platform fighter about outplaying your friends with powers.
+
+Pick a power, jump into the arena, and knock the other players out. Dash around, get Spiky, or toss a bomb and send everyone flying. Play together online over your local network, find nearby rooms in the lobby, or join with an IP address and port.
+
+FEATURES
+
+- Three powers to try: Dash, Spiky, and Bomb
+- Multiplayer with local network room discovery
+- Desktop and mobile controls
+- An in-game tutorial that explains the powers
+- A pause menu with settings
+
+CONTROLS
+
+Desktop
+Move: A / D or Left / Right Arrow
+Jump: W, Space, or Up Arrow
+Dash: Shift or J
+Spiky: E, F, or K
+Bomb: Hold Q to cook, then release to throw
+Power slots: Left, middle, and right mouse buttons use slots 1, 2, and 3
+
+Mobile
+Use the on-screen joystick to move and aim a held bomb. Use the on-screen buttons to jump and activate your equipped powers.
+
+PLAY
+https://arthursimao.itch.io/bally-battle
+
+GITHUB
+https://github.com/Reforgetting-Team/bally-battle
+
+DOWNLOADS
+https://github.com/Reforgetting-Team/bally-battle/releases/latest

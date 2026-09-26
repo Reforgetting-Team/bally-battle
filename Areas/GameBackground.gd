@@ -10,6 +10,7 @@ extends CanvasLayer
 const CLOUD_GAP: float = 10.0
 const DESIGN_WIDTH: float = 1920.0
 const DESIGN_HEIGHT: float = 1080.0
+const TERRAIN_REGION: Rect2 = Rect2(269.0, 959.0, 1383.0, 121.0)
 
 @export var cloud_scroll_speed: float = 18.0 # pixels per second
 
@@ -64,7 +65,7 @@ func _setup_textures() -> void:
 
 	terrain_atlas = AtlasTexture.new()
 	terrain_atlas.atlas = terrain_texture
-	terrain_atlas.region = Rect2(285, 959, 1243, 121)
+	terrain_atlas.region = TERRAIN_REGION
 
 	left_cloud_atlas = AtlasTexture.new()
 	left_cloud_atlas.atlas = left_cloud_texture
@@ -104,6 +105,19 @@ func _process(delta: float) -> void:
 		_cloud_scroll_x = fmod(_cloud_scroll_x, step_x)
 
 	_update_cloud_positions(step_x)
+
+func get_cloud_scroll_phase() -> float:
+	# gameplay reads this shared phase so swapping scenes never starts the clouds over
+	if not clouds_atlas:
+		return 0.0
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	if vp_size.x <= 0.0 or vp_size.y <= 0.0:
+		vp_size = Vector2(1152, 648)
+	var scale_factor: float = vp_size.y / DESIGN_HEIGHT
+	var step_x: float = clouds_atlas.region.size.x * scale_factor + CLOUD_GAP
+	if step_x <= 0.0:
+		return 0.0
+	return fposmod(_cloud_scroll_x / step_x, 1.0)
 
 func _update_layout() -> void:
 	if not is_inside_tree():
