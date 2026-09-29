@@ -1,5 +1,16 @@
 # changelog
 
+## 1.1.2 — lots of little fixes
+
+we did a pass over the game and cleaned up a bunch of bugs, from camera shake and mobile input to saved settings and multiplayer cleanup.
+
+- **camera and effects:** camera shake now fully resets after it ends, background layers don't duplicate in the editor, and the wind trail lines up properly with a smoother gradient.
+- **controls:** mobile button presses stay registered across high refresh rates, the buttons can show during desktop testing, and opening the pause menu now stops gameplay inputs. Wall bounces also play their sound again.
+- **menus and HUD:** transitions handle missing nodes and callbacks safely, the debug HUD stays in the corner on different screen sizes, and it now shows when you're cooking a bomb.
+- **settings:** master and music volume save between sessions, apply as you move the sliders, and corrupted power loadouts are kept to the usual three slots.
+- **multiplayer and matches:** resolved bomb data clears between games, disconnects don't reload a lobby you're already in, empty bomb IDs can't clear other bombs, and match timers stop cleanly when leaving a scene. Tutorial rounds now bring you back after a knockout.
+- **bombs and player data:** bomb cleanup checks IDs safely, victim IDs use the right type, and rolling bombs handle a missing sprite without errors.
+
 ## 1.1.1 — lil fixes n new stuff
 
 we gave the controls and menus a little polish, fixed up some map stuff, and put a practice buddy in the tutorial so u can test powers without waiting for a friend to join.

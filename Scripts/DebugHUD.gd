@@ -14,7 +14,17 @@ func _ready() -> void:
 func _create_ui() -> void:
 	overlay_panel = PanelContainer.new()
 	overlay_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay_panel.position = Vector2(850, 10)
+	# anchor to top-right so resizing the window or playing on phone doesnt push it offscreen lol
+	overlay_panel.anchors_preset = Control.PRESET_TOP_RIGHT
+	overlay_panel.anchor_left = 1.0
+	overlay_panel.anchor_top = 0.0
+	overlay_panel.anchor_right = 1.0
+	overlay_panel.anchor_bottom = 0.0
+	overlay_panel.offset_left = -300.0
+	overlay_panel.offset_top = 10.0
+	overlay_panel.offset_right = -10.0
+	overlay_panel.offset_bottom = 190.0
+	overlay_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	overlay_panel.custom_minimum_size = Vector2(290, 180)
 	overlay_panel.modulate = Color(1, 1, 1, 0.9)
 	overlay_panel.visible = PlayerData.debug_mode
@@ -90,6 +100,8 @@ func _process(_delta: float) -> void:
 			vel_str = "(%d, %d)" % [int(p.velocity.x), int(p.velocity.y)]
 			if "is_dead" in p and p.is_dead:
 				state_str = "DEAD"
+			elif "is_holding_bomb" in p and p.is_holding_bomb:
+				state_str = "COOKING BOMB (%.1fs)" % p.bomb_hold_timer
 			elif "is_spiky" in p and p.is_spiky:
 				state_str = "SPIKY (%.1fs)" % p.spiky_time_remaining
 			elif "is_dashing" in p and p.is_dashing:

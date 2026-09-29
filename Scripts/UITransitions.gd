@@ -68,6 +68,8 @@ static func _collect_children(root: Node, exclude: Array) -> Array:
 
 
 static func _offscreen_offset(nodes: Array) -> float:
+	if nodes.is_empty():
+		return 648.0
 	var ref: Control = nodes[0]
 	return ref.get_viewport_rect().size.y
 
@@ -79,6 +81,8 @@ static func animate_in_nodes(nodes: Array) -> void:
 
 	for n in nodes:
 		var ctrl: Control = n
+		if not is_instance_valid(ctrl):
+			continue
 		var target_y: float = ctrl.position.y
 		ctrl.position.y = target_y + offscreen_offset
 
@@ -89,14 +93,16 @@ static func animate_in_nodes(nodes: Array) -> void:
 
 static func animate_out_nodes(nodes: Array, on_complete: Callable) -> void:
 	if nodes.is_empty():
-		on_complete.call()
+		if on_complete.is_valid():
+			on_complete.call()
 		return
 
 	var offscreen_offset: float = _offscreen_offset(nodes)
 	var start_y: Dictionary = {}
 	for n in nodes:
 		var ctrl: Control = n
-		start_y[ctrl] = ctrl.position.y
+		if is_instance_valid(ctrl):
+			start_y[ctrl] = ctrl.position.y
 
 	var anchor: Control = nodes[0]
 	var tween: Tween = anchor.create_tween()
@@ -104,13 +110,16 @@ static func animate_out_nodes(nodes: Array, on_complete: Callable) -> void:
 	var rise_step := func(t: float) -> void:
 		for n in nodes:
 			var ctrl: Control = n
-			ctrl.position.y = start_y[ctrl] - OVERSHOOT_PX * t
+			if is_instance_valid(ctrl) and start_y.has(ctrl):
+				ctrl.position.y = start_y[ctrl] - OVERSHOOT_PX * t
 
 	var fall_step := func(t: float) -> void:
 		for n in nodes:
 			var ctrl: Control = n
-			ctrl.position.y = (start_y[ctrl] - OVERSHOOT_PX) + (offscreen_offset + OVERSHOOT_PX) * t
+			if is_instance_valid(ctrl) and start_y.has(ctrl):
+				ctrl.position.y = (start_y[ctrl] - OVERSHOOT_PX) + (offscreen_offset + OVERSHOOT_PX) * t
 
 	tween.tween_method(rise_step, 0.0, 1.0, ANTICIPATION_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.tween_method(fall_step, 0.0, 1.0, EXIT_SLIDE_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.tween_callback(on_complete)
+	if on_complete.is_valid():
+		tween.tween_callback(on_complete)

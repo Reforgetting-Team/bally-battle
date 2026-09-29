@@ -29,17 +29,11 @@ func _ready() -> void:
 	UITransitions.animate_in(self, [back_button, settings_backdrop])
 
 	if master_slider:
-		var master_idx := AudioServer.get_bus_index("Master")
-		if master_idx != -1:
-			master_slider.value = db_to_linear(AudioServer.get_bus_volume_db(master_idx))
+		master_slider.value = PlayerData.master_volume
 		master_slider.value_changed.connect(_on_master_changed)
 
 	if music_slider:
-		var music_idx := AudioServer.get_bus_index("Music")
-		if music_idx != -1:
-			music_slider.value = db_to_linear(AudioServer.get_bus_volume_db(music_idx))
-		else:
-			music_slider.value = 1.0
+		music_slider.value = PlayerData.music_volume
 		music_slider.value_changed.connect(_on_music_changed)
 
 	if debug_check:
@@ -85,18 +79,14 @@ func _on_debug_toggled(is_on: bool) -> void:
 	PlayerData.save_data()
 
 func _on_master_changed(val: float) -> void:
-	var master_idx := AudioServer.get_bus_index("Master")
-	if master_idx != -1:
-		AudioServer.set_bus_volume_db(master_idx, linear_to_db(max(val, 0.0001)))
+	PlayerData.master_volume = val
+	PlayerData.save_data()
+	PlayerData.apply_audio_settings()
 
 func _on_music_changed(val: float) -> void:
-	var music_idx := AudioServer.get_bus_index("Music")
-	if music_idx != -1:
-		AudioServer.set_bus_volume_db(music_idx, linear_to_db(max(val, 0.0001)))
-	elif has_node("/root/Music"):
-		var music_node: Node = get_node("/root/Music")
-		if "volume_db" in music_node:
-			music_node.volume_db = linear_to_db(max(val, 0.0001))
+	PlayerData.music_volume = val
+	PlayerData.save_data()
+	PlayerData.apply_audio_settings()
 
 func _on_fps_selected(index: int) -> void:
 	PlayerData.fps_limit = fps_option.get_item_metadata(index)

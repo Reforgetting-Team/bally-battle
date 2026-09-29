@@ -20,6 +20,7 @@ const SPACING: float = 16.0 # how far apart the three lines chill from each othe
 func _ready() -> void:
 	# draw in world space so the curves dont spin around with the ball
 	top_level = true
+	global_position = Vector2.ZERO
 	# z_index 1 puts it in front of ground tiles (z=0) n behind the ball sprite (z=2)
 	z_index = 1
 	_setup_lines()
@@ -41,8 +42,9 @@ func _setup_lines() -> void:
 		var grad := Gradient.new()
 		grad.set_color(0, Color(1.0, 1.0, 1.0, 0.0))
 		grad.set_offset(0, 0.0)
+		grad.set_color(1, Color(1.0, 1.0, 1.0, 0.75))
+		grad.set_offset(1, 1.0)
 		grad.add_point(0.35, Color(1.0, 1.0, 1.0, 0.75))
-		grad.add_point(1.0, Color(1.0, 1.0, 1.0, 0.75))
 		line.gradient = grad
 
 func start_trail(target: CharacterBody2D) -> void:

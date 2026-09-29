@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://c6s0vwyapvev8" path="res://Areas/MatchManager.gd" id="1_match"]
 [ext_resource type="Texture2D" uid="uid://b1oyy2pw67hb0" path="res://Menu/Back.png" id="4_back"]
-[ext_resource type="TileSet" path="res://Areas/DefaultTileSet.tres" id="4_default_tiles"]
+[ext_resource type="TileSet" uid="uid://c5357rwrut2nf" path="res://Areas/DefaultTileSet.tres" id="4_default_tiles"]
 [ext_resource type="Texture2D" uid="uid://cyedcdpsekprv" path="res://Menu/BackHover.png" id="5_back_hover"]
 [ext_resource type="Script" uid="uid://bx81hrqu28a2y" path="res://Menu/Back.gd" id="6_back_script"]
 [ext_resource type="PackedScene" path="res://Character/TutorialDummy.tscn" id="7_tutorial_dummy"]
@@ -29,6 +29,7 @@ position = Vector2(175, -111)
 [node name="PracticeDummy" parent="PracticeDummies" unique_id=557039974 instance=ExtResource("7_tutorial_dummy")]
 position = Vector2(912, 509)
 respawn_delay = 0.6
+player_color = Color(0.66549367, 0.6592095, 1, 1)
 
 [node name="PracticeDummies" type="Node2D" parent="PracticeDummies" unique_id=1251615161]
 z_index = 1
@@ -37,6 +38,7 @@ position = Vector2(-1035, 0)
 [node name="PracticeDummy" parent="PracticeDummies/PracticeDummies" unique_id=721480566 instance=ExtResource("7_tutorial_dummy")]
 position = Vector2(912, 509)
 respawn_delay = 0.6
+player_color = Color(1, 0, 0, 1)
 
 [node name="VoidZone" type="Area2D" parent="." unique_id=1182059153]
 collision_layer = 0

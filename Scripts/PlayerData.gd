@@ -15,9 +15,14 @@ var vsync_enabled: bool = true
 # 0 windowed, 1 borderless, 2 fullscreen. phones n web ignore this
 var window_mode: int = 2
 
+# audio volume levels (0.0 to 1.0 linear)
+var master_volume: float = 1.0
+var music_volume: float = 1.0
+
 func _ready() -> void:
 	load_data()
 	apply_graphics_settings()
+	apply_audio_settings()
 
 func load_data() -> void:
 	# load whatever color/name/powers we picked last time we played
@@ -32,6 +37,8 @@ func load_data() -> void:
 			# pad old saves so left/middle/right always have a slot
 			while equipped_powers.size() < 3:
 				equipped_powers.append("")
+			if equipped_powers.size() > 3:
+				equipped_powers = equipped_powers.slice(0, 3)
 		if config.has_section_key("debug", "debug_mode"):
 			debug_mode = config.get_value("debug", "debug_mode", false)
 		if config.has_section_key("graphics", "fps_limit"):
@@ -40,6 +47,10 @@ func load_data() -> void:
 			vsync_enabled = config.get_value("graphics", "vsync_enabled", vsync_enabled)
 		if config.has_section_key("graphics", "window_mode"):
 			window_mode = config.get_value("graphics", "window_mode", window_mode)
+		if config.has_section_key("audio", "master_volume"):
+			master_volume = clampf(float(config.get_value("audio", "master_volume", master_volume)), 0.0, 1.0)
+		if config.has_section_key("audio", "music_volume"):
+			music_volume = clampf(float(config.get_value("audio", "music_volume", music_volume)), 0.0, 1.0)
 
 func save_data() -> void:
 	# write our customization out to the config file so its there next time
@@ -50,7 +61,22 @@ func save_data() -> void:
 	config.set_value("graphics", "fps_limit", fps_limit)
 	config.set_value("graphics", "vsync_enabled", vsync_enabled)
 	config.set_value("graphics", "window_mode", window_mode)
+	config.set_value("audio", "master_volume", master_volume)
+	config.set_value("audio", "music_volume", music_volume)
 	config.save(save_path)
+
+func apply_audio_settings() -> void:
+	# push volume sliders straight into the engine buses
+	var master_idx := AudioServer.get_bus_index("Master")
+	if master_idx != -1:
+		AudioServer.set_bus_volume_db(master_idx, linear_to_db(maxf(master_volume, 0.0001)))
+	var music_idx := AudioServer.get_bus_index("Music")
+	if music_idx != -1:
+		AudioServer.set_bus_volume_db(music_idx, linear_to_db(maxf(music_volume, 0.0001)))
+	elif is_inside_tree() and has_node("/root/Music"):
+		var music_node: Node = get_node("/root/Music")
+		if "volume_db" in music_node:
+			music_node.volume_db = linear_to_db(maxf(music_volume, 0.0001))
 
 func apply_graphics_settings() -> void:
 	# push saved graphics into the game now

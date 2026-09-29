@@ -312,7 +312,12 @@ func _finish_death() -> void:
 		death_audio.play()
 
 	# stick around silently for a beat so the text/sound actually register
-	await get_tree().create_timer(1.0).timeout
+	var tree := get_tree()
+	if not tree:
+		return
+	await tree.create_timer(1.0).timeout
+	if not is_inside_tree():
+		return
 	_on_death_cleanup_complete()
 
 func _on_death_cleanup_complete() -> void:
@@ -340,13 +345,22 @@ func _physics_process(delta: float) -> void:
 	# properly typed now, just calls the method straight up
 	var mobile_active = mobile_controls != null and mobile_controls.is_active()
 
+	# if pause menu or match menu overlay is open, dont leak any keys through lol
+	# clicking sliders or typing shouldnt make ur ball dash into the abyss
+	var match_menu_open := false
+	for menu_overlay in get_tree().get_nodes_in_group("match_menu_overlay"):
+		if bool(menu_overlay.get("menu_is_open")):
+			match_menu_open = true
+			break
+
 	# snapshot whether jump is being held ONCE per frame, right up front, so ts
 	# stays consistent for the rest of the frame n doesnt get read twice n desync
-	var jump_held: bool = Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept")
-	
-	# mobile controls support too
-	if mobile_active and mobile_controls.is_jump_pressed():
-		jump_held = true
+	var jump_held: bool = false
+	if not match_menu_open:
+		jump_held = Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept")
+		# mobile controls support too
+		if mobile_active and mobile_controls.is_jump_pressed():
+			jump_held = true
 
 	# falling n slope sliding stuff
 	if not is_on_floor():
@@ -366,20 +380,22 @@ func _physics_process(delta: float) -> void:
 	# input handling: wasd / arrows / mobile joystick, or hold left click to steer
 	var input_x: float = 0.0
 
-	# 1. mobile joystick, takes priority if its actually present
-	if mobile_active:
-		var joystick_vec = mobile_controls.get_joystick_vector()
-		if abs(joystick_vec.x) > 0.05:
-			input_x = joystick_vec.x
-	
-	# 2. keyboard / dpad if theres no mobile input
-	if input_x == 0.0:
-		input_x = Input.get_axis("ui_left", "ui_right")
+	# ignore inputs if paused or in a menu lol
+	if not match_menu_open:
+		# 1. mobile joystick, takes priority if its actually present
+		if mobile_active:
+			var joystick_vec = mobile_controls.get_joystick_vector()
+			if abs(joystick_vec.x) > 0.05:
+				input_x = joystick_vec.x
+
+		# 2. keyboard / dpad if theres no mobile input
 		if input_x == 0.0:
-			if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
-				input_x -= 1.0
-			if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
-				input_x += 1.0
+			input_x = Input.get_axis("ui_left", "ui_right")
+			if input_x == 0.0:
+				if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+					input_x -= 1.0
+				if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+					input_x += 1.0
 
 	# 3. mouse steer used to live here (hold left click to roll toward cursor),
 	# but left click is now Power Slot 1's trigger button, so it got removed
@@ -403,9 +419,11 @@ func _physics_process(delta: float) -> void:
 	if dash_cooldown_timer > 0.0:
 		dash_cooldown_timer = max(dash_cooldown_timer - delta, 0.0)
 
-	var dash_just_pressed = Input.is_action_just_pressed("dash")
-	if mobile_active and mobile_controls.is_dash_just_pressed():
-		dash_just_pressed = true
+	var dash_just_pressed = false
+	if not match_menu_open:
+		dash_just_pressed = Input.is_action_just_pressed("dash")
+		if mobile_active and mobile_controls.is_dash_just_pressed():
+			dash_just_pressed = true
 	
 	if dash_just_pressed:
 		_try_dash(input_x)
@@ -414,15 +432,19 @@ func _physics_process(delta: float) -> void:
 	if bomb_cooldown_timer > 0.0:
 		bomb_cooldown_timer = max(bomb_cooldown_timer - delta, 0.0)
 
-	var bomb_just_pressed = Input.is_action_just_pressed("bomb")
-	if mobile_active and mobile_controls.has_method("is_bomb_just_pressed") and mobile_controls.is_bomb_just_pressed():
-		bomb_just_pressed = true
+	var bomb_just_pressed = false
+	var bomb_just_released = false
+	if not match_menu_open:
+		bomb_just_pressed = Input.is_action_just_pressed("bomb")
+		if mobile_active and mobile_controls.has_method("is_bomb_just_pressed") and mobile_controls.is_bomb_just_pressed():
+			bomb_just_pressed = true
+		bomb_just_released = Input.is_action_just_released("bomb")
+		if mobile_active and mobile_controls.has_method("is_bomb_just_released") and mobile_controls.is_bomb_just_released():
+			bomb_just_released = true
+
 	if bomb_just_pressed:
 		_try_bomb()
 
-	var bomb_just_released = Input.is_action_just_released("bomb")
-	if mobile_active and mobile_controls.has_method("is_bomb_just_released") and mobile_controls.is_bomb_just_released():
-		bomb_just_released = true
 	if bomb_just_released:
 		_release_bomb()
 
@@ -430,11 +452,6 @@ func _physics_process(delta: float) -> void:
 	# matching mouse button (left/middle/right). lets us just swap the array
 	# order in the loadout menu instead of hardcoding one button per power
 	# clicking a settings slider shouldnt also fire an attack at somebody lol
-	var match_menu_open := false
-	for menu_overlay in get_tree().get_nodes_in_group("match_menu_overlay"):
-		if bool(menu_overlay.get("menu_is_open")):
-			match_menu_open = true
-			break
 	for slot_index in range(min(equipped_powers.size(), 3)):
 		var slot_action := "power_slot_%d" % (slot_index + 1)
 		var slot_power: String = equipped_powers[slot_index]
@@ -447,7 +464,7 @@ func _physics_process(delta: float) -> void:
 			mouse_slot_released = mobile_controls.consume_mouse_slot_just_released(slot_index)
 		if not match_menu_open and mouse_slot_pressed:
 			_try_power(slot_power, input_x)
-		if slot_power == "bomb" and mouse_slot_released:
+		if not match_menu_open and slot_power == "bomb" and mouse_slot_released:
 			_release_bomb()
 
 	# bomb hold ticking: startup windup counts down, n if u greedily hold it
@@ -484,9 +501,11 @@ func _physics_process(delta: float) -> void:
 	if spiky_cooldown_timer > 0.0:
 		spiky_cooldown_timer = max(spiky_cooldown_timer - delta, 0.0)
 
-	var spiky_just_pressed = Input.is_action_just_pressed("spiky")
-	if mobile_active and mobile_controls.is_spiky_just_pressed():
-		spiky_just_pressed = true
+	var spiky_just_pressed = false
+	if not match_menu_open:
+		spiky_just_pressed = Input.is_action_just_pressed("spiky")
+		if mobile_active and mobile_controls.is_spiky_just_pressed():
+			spiky_just_pressed = true
 	
 	if spiky_just_pressed:
 		_try_spiky()
@@ -499,9 +518,11 @@ func _physics_process(delta: float) -> void:
 	# jump w/ space / w / up arrow / mobile button (edge triggered so holding it
 	# down doesnt spam jump every frame, learned that one the hard way).
 	# blocked while spiky's popped or ur holding a bomb, same as steering
-	var jump_pressed = Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("ui_accept")
-	if mobile_active and mobile_controls.is_jump_just_pressed():
-		jump_pressed = true
+	var jump_pressed = false
+	if not match_menu_open:
+		jump_pressed = Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("ui_accept")
+		if mobile_active and mobile_controls.is_jump_just_pressed():
+			jump_pressed = true
 	
 	if jump_pressed and is_on_floor() and not is_spiky and not is_holding_bomb:
 		velocity.y = jump_velocity
@@ -534,6 +555,7 @@ func _physics_process(delta: float) -> void:
 	# bounce off walls if we slam into em fast enough, satisfying af
 	if is_on_wall() and abs(pre_move_vel.x) > min_bounce_speed:
 		velocity.x = -pre_move_vel.x * (bounce_factor * 0.75)
+		_play_bounce_sound()
 
 	# make the ball sprite actually roll n spin while its moving, lil detail but it matters
 	if sprite:

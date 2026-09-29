@@ -231,6 +231,7 @@ func leave_game() -> void:
 	if multiplayer:
 		multiplayer.multiplayer_peer = null
 	players.clear()
+	resolved_bomb_expiries.clear()
 	is_host = false
 	is_scene_transitioning = false
 	_scene_transition_id = 0
@@ -316,7 +317,8 @@ func _on_server_disconnected() -> void:
 	print("Server disconnected.")
 	leave_game()
 	server_disconnected.emit()
-	get_tree().change_scene_to_file("res://Menu/Lobby.tscn")
+	if get_tree().current_scene and get_tree().current_scene.scene_file_path != "res://Menu/Lobby.tscn":
+		get_tree().change_scene_to_file("res://Menu/Lobby.tscn")
 
 func _on_peer_connected(id: int) -> void:
 	print("Peer connected: ", id)
@@ -528,9 +530,10 @@ func _apply_blast(blast_position: Vector2, blast_radius: float, victim_ids: Pack
 	if not bomb_id.is_empty():
 		_remember_resolved_bomb(bomb_id)
 	_spawn_blast_visual(blast_position, blast_radius)
-	for bomb in get_tree().get_nodes_in_group("bomb"):
-		if is_instance_valid(bomb) and bomb.get("bomb_id") == bomb_id:
-			bomb.queue_free()
+	if not bomb_id.is_empty():
+		for bomb in get_tree().get_nodes_in_group("bomb"):
+			if is_instance_valid(bomb) and bomb.get("bomb_id") == bomb_id:
+				bomb.queue_free()
 
 	for player in get_tree().get_nodes_in_group("player"):
 		if not is_instance_valid(player) or player.is_queued_for_deletion():

@@ -46,6 +46,10 @@ func _ready() -> void:
 func _create_composite_foreground() -> void:
 	if not bg_rect:
 		return
+	# dont dupe it if we're in tool mode or re-entering the tree
+	if has_node("CompositeForeground"):
+		composite_foreground = get_node("CompositeForeground") as TextureRect
+		return
 
 	# Menu/Background.png is only the see-through foreground art, so give it
 	# the tiled sky underneath instead of letting the gray clear color show thru

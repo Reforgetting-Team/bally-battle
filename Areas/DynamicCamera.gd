@@ -73,9 +73,16 @@ func _physics_process(delta: float) -> void:
 
 func _update_shake(delta: float) -> void:
 	if _shake_time_left <= 0.0:
+		# boom's over, clear the values so future small shakes dont stay huge forever lol
+		_shake_strength = 0.0
+		_shake_duration = 0.0
 		offset = Vector2.ZERO
 		return
 
 	_shake_time_left = max(_shake_time_left - delta, 0.0)
 	var fade: float = _shake_time_left / max(_shake_duration, 0.001)
 	offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake_strength * fade
+	if _shake_time_left <= 0.0:
+		_shake_strength = 0.0
+		_shake_duration = 0.0
+		offset = Vector2.ZERO

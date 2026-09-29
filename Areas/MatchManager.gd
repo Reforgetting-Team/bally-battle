@@ -31,6 +31,9 @@ var _match_end_check_pending: bool = false
 
 func _ready() -> void:
 	is_tutorial = scene_file_path.ends_with("Tutorial.tscn")
+	if is_tutorial:
+		# dummies respawn, so you should too when you're just learning the ropes
+		respawn_on_death = true
 
 	# tag ourselves so MobileControls knows ts an actual gameplay scene n not
 	# just a menu or smth, thats how it decides whether to show the touch buttons at all
@@ -188,11 +191,15 @@ func spawn_players() -> void:
 
 func _on_player_died(_dead_player_id: int) -> void:
 	if is_tutorial:
+		var tree := get_tree()
+		if not tree:
+			return
+		await tree.create_timer(1.2).timeout
+		if not is_inside_tree():
+			return
 		if respawn_on_death:
-			await get_tree().create_timer(1.2).timeout
 			spawn_players()
 		else:
-			await get_tree().create_timer(1.2).timeout
 			get_tree().change_scene_to_file("res://Menu/MainMenu.tscn")
 		return
 
@@ -227,7 +234,12 @@ func _check_match_end() -> void:
 
 func _handle_round_won(winner_name: String) -> void:
 	_show_winner_banner(winner_name)
-	await get_tree().create_timer(2.2).timeout
+	var tree := get_tree()
+	if not tree:
+		return
+	await tree.create_timer(2.2).timeout
+	if not is_inside_tree():
+		return
 	advance_to_next_level()
 
 func advance_to_next_level() -> void:
@@ -243,7 +255,12 @@ func advance_to_next_level() -> void:
 		is_round_over = false
 		print("Host changing level to: ", next_path)
 		# tiny delay so the clients dont get desynced while it loads
-		await get_tree().create_timer(0.1).timeout
+		var tree := get_tree()
+		if not tree:
+			return
+		await tree.create_timer(0.1).timeout
+		if not is_inside_tree():
+			return
 		network_mgr.change_level(next_path)
 	else:
 		is_round_over = false
@@ -309,5 +326,10 @@ func _on_player_disconnected(peer_id: int) -> void:
 			break
 	
 	# so ts checks if someone bailing mid match means the remaining player just wins
-	await get_tree().create_timer(0.1).timeout
+	var tree := get_tree()
+	if not tree:
+		return
+	await tree.create_timer(0.1).timeout
+	if not is_inside_tree():
+		return
 	_check_match_end()

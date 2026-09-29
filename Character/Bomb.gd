@@ -113,7 +113,7 @@ func _physics_process(delta: float) -> void:
 	_check_player_contacts()
 
 	# spin the sprite while it moves, same rolling-ball detail Player.gd does
-	if abs(velocity.x) > 0.01:
+	if sprite and abs(velocity.x) > 0.01:
 		sprite.rotation += (velocity.x * delta) / BOMB_RADIUS
 
 func _on_player_body_entered(body: Node2D) -> void:
@@ -238,7 +238,7 @@ func _find_victim_ids() -> PackedInt32Array:
 			continue
 		if player.global_position.distance_to(global_position) <= explosion_radius:
 			if "player_id" in player:
-				victims.append(player.player_id)
+				victims.append(int(player.get("player_id")))
 	return victims
 
 func _resolve_blast_locally() -> void:

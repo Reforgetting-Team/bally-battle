@@ -68,6 +68,11 @@ func _ready() -> void:
 		return
 	
 	is_mobile_active = true
+	if always_show:
+		# make touch buttons visible on desktop when forced on in settings
+		for btn in [jump_button, dash_button, spiky_button, bomb_button]:
+			if btn:
+				btn.visibility_mode = TouchScreenButton.VISIBILITY_ALWAYS
 	
 	# keep the scene positions as the layout starting point, then stick each
 	# touch button to the nearest screen edges when the phone aspect ratio shifts
@@ -161,11 +166,17 @@ func _update_button_states() -> void:
 	var spiky_now = spiky_button and spiky_button.is_pressed()
 	var bomb_now = bomb_button and bomb_button.is_pressed()
 	
-	jump_just_pressed = jump_now and not jump_pressed_last_frame
-	dash_just_pressed = dash_now and not dash_pressed_last_frame
-	spiky_just_pressed = spiky_now and not spiky_pressed_last_frame
-	bomb_just_pressed = bomb_now and not bomb_pressed_last_frame
-	bomb_just_released = not bomb_now and bomb_pressed_last_frame
+	# latch the button down edge so fast taps dont get swallowed by high fps
+	if jump_now and not jump_pressed_last_frame:
+		jump_just_pressed = true
+	if dash_now and not dash_pressed_last_frame:
+		dash_just_pressed = true
+	if spiky_now and not spiky_pressed_last_frame:
+		spiky_just_pressed = true
+	if bomb_now and not bomb_pressed_last_frame:
+		bomb_just_pressed = true
+	if not bomb_now and bomb_pressed_last_frame:
+		bomb_just_released = true
 	
 	jump_pressed_last_frame = jump_now
 	dash_pressed_last_frame = dash_now
@@ -260,28 +271,38 @@ func is_jump_pressed() -> bool:
 	return jump_button != null and jump_button.is_pressed()
 
 func is_jump_just_pressed() -> bool:
-	return jump_just_pressed
+	var pressed := jump_just_pressed
+	jump_just_pressed = false
+	return pressed
 
 func is_dash_pressed() -> bool:
 	return dash_button != null and dash_button.is_pressed()
 
 func is_dash_just_pressed() -> bool:
-	return dash_just_pressed
+	var pressed := dash_just_pressed
+	dash_just_pressed = false
+	return pressed
 
 func is_spiky_pressed() -> bool:
 	return spiky_button != null and spiky_button.is_pressed()
 
 func is_spiky_just_pressed() -> bool:
-	return spiky_just_pressed
+	var pressed := spiky_just_pressed
+	spiky_just_pressed = false
+	return pressed
 
 func is_bomb_pressed() -> bool:
 	return bomb_button != null and bomb_button.is_pressed()
 
 func is_bomb_just_pressed() -> bool:
-	return bomb_just_pressed
+	var pressed := bomb_just_pressed
+	bomb_just_pressed = false
+	return pressed
 
 func is_bomb_just_released() -> bool:
-	return bomb_just_released
+	var released := bomb_just_released
+	bomb_just_released = false
+	return released
 
 func is_active() -> bool:
 	return is_mobile_active and visible
