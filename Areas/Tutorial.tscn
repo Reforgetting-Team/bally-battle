@@ -37,6 +37,7 @@ position = Vector2(-1035, 0)
 
 [node name="PracticeDummy" parent="PracticeDummies/PracticeDummies" unique_id=721480566 instance=ExtResource("7_tutorial_dummy")]
 position = Vector2(912, 509)
+rotation = 3.5416398
 respawn_delay = 0.6
 player_color = Color(1, 0, 0, 1)
 
