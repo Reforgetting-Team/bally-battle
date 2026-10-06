@@ -85,12 +85,17 @@ var shader_mat: ShaderMaterial
 var sprite_base_scale: Vector2 = Vector2.ONE
 
 # remote balls coast between updates n ease back toward the real position,
-# otherwise one dropped packet makes em look like theyre teleporting
+# with anti-tunneling physics so high latency doesnt make bro clip through blocks
 var _net_target_position: Vector2 = Vector2.ZERO
 var _net_target_rotation: float = 0.0
 var _net_velocity: Vector2 = Vector2.ZERO
 var _net_initialized: bool = false
-const NET_CORRECTION_RATE: float = 48.0 # higher = snaps to the real position faster, lower = smoother but laggier
+var _net_sync_timer: float = 0.0
+var _net_seq: int = 0
+var _latest_net_seq: int = 0
+var _time_since_packet: float = 0.0
+const NET_TICK_INTERVAL: float = 0.04 # 25 Hz send rate, keeps websocket buffer nice n clean
+const MAX_EXTRAPOLATE_TIME: float = 0.10 # dont let the bro rocket across dimensions when lagging
 
 # give fresh spawns a beat to settle before slope rolling kicks in
 var _spawn_grace_frames: int = 30
@@ -529,6 +534,7 @@ func _physics_process(delta: float) -> void:
 		# play the pop sound n reset bounce volume for whenever it lands next
 		bounce_volume_db = 0.0
 		_play_jump_sound()
+		_net_sync_timer = 0.0
 
 	# remember the speed before collision so we can do sick bounces off it
 	var pre_move_vel = velocity
@@ -545,17 +551,21 @@ func _physics_process(delta: float) -> void:
 			velocity.y = jump_velocity
 			bounce_volume_db = 0.0
 			_play_jump_sound()
+			_net_sync_timer = 0.0
 		else:
 			velocity.y = -pre_move_vel.y * bounce_factor
 			_play_bounce_sound()
+			_net_sync_timer = 0.0
 	elif is_on_ceiling() and pre_move_vel.y < -min_bounce_speed:
 		velocity.y = -pre_move_vel.y * bounce_factor
 		_play_bounce_sound()
+		_net_sync_timer = 0.0
 
 	# bounce off walls if we slam into em fast enough, satisfying af
 	if is_on_wall() and abs(pre_move_vel.x) > min_bounce_speed:
 		velocity.x = -pre_move_vel.x * (bounce_factor * 0.75)
 		_play_bounce_sound()
+		_net_sync_timer = 0.0
 
 	# make the ball sprite actually roll n spin while its moving, lil detail but it matters
 	if sprite:
@@ -563,25 +573,63 @@ func _physics_process(delta: float) -> void:
 		if spikes_visual:
 			spikes_visual.rotation = sprite.rotation
 
-	# so ts makes like so the player position gets syncronizated across everyone
-	# else's screen too, basically we just spam our transform out over rpc so
-	# the other clients see us rolling around in real time n it doesnt look laggy
-	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
-		_sync_transform.rpc(global_position, sprite.rotation if sprite else 0.0, velocity, bomb_aim_dir)
+	# throttle transform sync to ~25 Hz so we dont drown the websocket buffer
+	# on high latency connections (looking at u, international routing)
+	_net_sync_timer -= delta
+	if _net_sync_timer <= 0.0:
+		_net_sync_timer = NET_TICK_INTERVAL
+		if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
+			_net_seq += 1
+			_sync_transform.rpc(global_position, sprite.rotation if sprite else 0.0, velocity, bomb_aim_dir, _net_seq)
 
 func _remote_interpolate(delta: float) -> void:
-	# keep remote balls rolling between packets, then ease out any drift
+	# ts manages remote prediction n interpolation so high ping doesnt look like a slideshow
 	if not _net_initialized:
 		return
 
-	_net_target_position += _net_velocity * delta
+	_time_since_packet += delta
 
-	var correction: float = clamp(NET_CORRECTION_RATE * delta, 0.0, 1.0)
-	global_position = global_position.lerp(_net_target_position, correction)
-	velocity = _net_velocity
+	# bro is on 400ms from the other side of the planet, dont let him phase into the 4th dimension
+	# only dead-reckon extrapolate for a brief slice (~0.10s / ~2.5 ticks)
+	# if packets are lagging behind, apply friction so remote ball coasts to a stop
+	# instead of rocketing straight through the stage blocks
+	if _time_since_packet < MAX_EXTRAPOLATE_TIME:
+		_net_target_position += _net_velocity * delta
+	else:
+		_net_velocity = _net_velocity.move_toward(Vector2.ZERO, 800.0 * delta)
+		_net_target_position += _net_velocity * delta
 
+	var to_target: Vector2 = _net_target_position - global_position
+	var dist: float = to_target.length()
+
+	# if bro is completely off the rails (respawn, death warp, or giant >260px gap), just snap straight up
+	if dist > 260.0:
+		global_position = _net_target_position
+		velocity = _net_velocity
+	else:
+		# smooth catch-up velocity: blend reported velocity with pull towards target
+		var catch_up_speed: float = clamp(dist * 18.0, 0.0, 1400.0)
+		var target_pull: Vector2 = to_target.normalized() * catch_up_speed
+		
+		if _net_velocity.length() > 20.0:
+			velocity = _net_velocity.lerp(target_pull, 0.45)
+		else:
+			velocity = target_pull
+
+		# use move_and_slide so remote balls actually respect walls instead of noclipping like gmod!
+		move_and_slide()
+
+		# when close enough, smoothly pull the remaining sub-pixel/minor drift
+		# if stuck on a lip/corner with error building up, softly ease it over
+		if dist < 45.0:
+			global_position = global_position.lerp(_net_target_position, clamp(16.0 * delta, 0.0, 1.0))
+		elif dist > 90.0 and get_slide_collision_count() > 0:
+			# ball hit a snag or corner desync, gently nudge it toward real target so it doesn't get permanently wedged
+			global_position = global_position.lerp(_net_target_position, clamp(6.0 * delta, 0.0, 1.0))
+
+	# roll n rotate the ball smoothly
 	if sprite:
-		sprite.rotation = lerp_angle(sprite.rotation, _net_target_rotation, correction)
+		sprite.rotation = lerp_angle(sprite.rotation, _net_target_rotation, clamp(18.0 * delta, 0.0, 1.0))
 		if spikes_visual:
 			spikes_visual.rotation = sprite.rotation
 
@@ -603,10 +651,14 @@ func _play_bounce_sound() -> void:
 	bounce_volume_db -= BOUNCE_FADE_DB
 
 # feed remote movement into the smoother instead of snapping the ball outright
-@rpc("unreliable")
-func _sync_transform(pos: Vector2, rot: float, vel: Vector2, aim_dir: Vector2 = Vector2.RIGHT) -> void:
+@rpc("unreliable_ordered")
+func _sync_transform(pos: Vector2, rot: float, vel: Vector2, aim_dir: Vector2 = Vector2.RIGHT, seq: int = 0) -> void:
 	if is_local_player:
 		return
+	if seq > 0 and seq < _latest_net_seq:
+		return # stale packet arrived out of order, toss it
+	_latest_net_seq = seq
+	_time_since_packet = 0.0
 	_net_target_position = pos
 	_net_target_rotation = rot
 	_net_velocity = vel
@@ -644,6 +696,8 @@ func _try_dash(input_x: float) -> void:
 	# tell the lobby boys we just dashed so they see the wind trail too
 	if _has_network_peer() and not NetworkManagerScript.is_scene_transitioning:
 		_sync_dash.rpc(dash_direction)
+		# blast out a sync tick immediately so the burst speed hits right away
+		_net_sync_timer = 0.0
 
 @rpc("reliable")
 func _sync_dash(dir: float) -> void:

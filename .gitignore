@@ -8,3 +8,7 @@ Exports/
 # Junk
 .DS_Store
 Thumbs.db
+
+# Server backup binaries
+server_backup/*.x86_64
+server_backup/*.tar.gz
