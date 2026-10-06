@@ -43,7 +43,7 @@ func _ready() -> void:
 				PlayerData.dedicated_server_address = remote_url
 		url_discovery_req.queue_free()
 	)
-	url_discovery_req.request("https://raw.githubusercontent.com/Reforgetting-Team/bally-battle/server/server_url.txt")
+	url_discovery_req.request("https://raw.githubusercontent.com/Reforgetting-Team/bally-battle/main/server_url.txt")
 
 	create_room_btn.pressed.connect(_on_create_room_pressed)
 	join_room_btn.pressed.connect(_on_join_room_pressed)
