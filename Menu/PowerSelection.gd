@@ -252,10 +252,17 @@ func _on_done_pressed() -> void:
 		network_mgr.set_player_ready(true)
 		network_mgr.update_player_info(PlayerData.player_name, PlayerData.skin_color, PlayerData.equipped_powers)
 
-	UITransitions.animate_out(self, _go_to_lobby, [back_button])
+	UITransitions.animate_out(self, _go_to_next_menu, [back_button])
 
-func _go_to_lobby() -> void:
-	get_tree().change_scene_to_file("res://Menu/Lobby.tscn")
+func _go_to_next_menu() -> void:
+	# if were already in a room or lobby, go straight back to it, otherwise show room mode picker
+	if NetworkManagerScript.peer != null:
+		if not PlayerData.current_room_code.is_empty():
+			get_tree().change_scene_to_file("res://Menu/RoomLobby.tscn")
+			return
+		get_tree().change_scene_to_file("res://Menu/Lobby.tscn")
+		return
+	get_tree().change_scene_to_file("res://Menu/RoomSelect.tscn")
 
 func _on_back_pressed() -> void:
 	back_button.disabled = true

@@ -1,0 +1,132 @@
+[gd_scene format=3 uid="uid://dkn61vqxsp23e"]
+
+[ext_resource type="Script" path="res://Menu/RoomLobby.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Menu/Back.png" id="2_back"]
+[ext_resource type="Texture2D" path="res://Menu/BackHover.png" id="3_backhover"]
+
+[node name="RoomLobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="BackButton" type="TextureButton" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 32.0
+offset_top = 24.0
+offset_right = 112.0
+offset_bottom = 104.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("2_back")
+texture_hover = ExtResource("3_backhover")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="MainVBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -240.0
+offset_right = 340.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="CodeHeaderHBox" type="HBoxContainer" parent="MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="RoomCodeLabel" type="Label" parent="MainVBox/CodeHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.95, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 38
+text = "ROOM CODE: ----"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CopyCodeButton" type="Button" parent="MainVBox/CodeHeaderHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "COPY CODE"
+
+[node name="RosterPanel" type="PanelContainer" parent="MainVBox"]
+custom_minimum_size = Vector2(0, 260)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="MainVBox/RosterPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MainVBox/RosterPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RosterHeader" type="Label" parent="MainVBox/RosterPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 18
+text = "PLAYERS IN ROOM"
+
+[node name="HSeparator" type="HSeparator" parent="MainVBox/RosterPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MainVBox/RosterPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlayerListContainer" type="VBoxContainer" parent="MainVBox/RosterPanel/MarginContainer/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="StatusLabel" type="Label" parent="MainVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.6, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 17
+text = "Waiting for players to join..."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ActionsHBox" type="HBoxContainer" parent="MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="LeaveButton" type="Button" parent="MainVBox/ActionsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "LEAVE ROOM"
+
+[node name="StartButton" type="Button" parent="MainVBox/ActionsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "START MATCH"

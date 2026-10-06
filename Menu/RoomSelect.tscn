@@ -1,0 +1,241 @@
+[gd_scene format=3 uid="uid://c28x5nna4g7kq"]
+
+[ext_resource type="Script" path="res://Menu/RoomSelect.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://Menu/Back.png" id="2_back"]
+[ext_resource type="Texture2D" path="res://Menu/BackHover.png" id="3_backhover"]
+[ext_resource type="Texture2D" path="res://Menu/CreateRoom.png" id="4_createroom"]
+[ext_resource type="Texture2D" path="res://Menu/JoinRoom.png" id="5_joinroom"]
+[ext_resource type="Texture2D" path="res://Menu/CustomIP.png" id="6_customip"]
+
+[node name="RoomSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="BackButton" type="TextureButton" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 32.0
+offset_top = 24.0
+offset_right = 112.0
+offset_bottom = 104.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("2_back")
+texture_hover = ExtResource("3_backhover")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 36.0
+offset_right = 300.0
+offset_bottom = 86.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 40
+text = "MULTIPLAYER"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 86.0
+offset_right = 300.0
+offset_bottom = 116.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 1, 0.9)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 18
+text = "Play online globally or connect directly via IP"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardsCenter" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -180.0
+offset_right = 450.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CardsCenter"]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="CreateRoomButton" type="TextureButton" parent="CardsCenter/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(230, 290)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("4_createroom")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="JoinRoomButton" type="TextureButton" parent="CardsCenter/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(230, 290)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("5_joinroom")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="CustomIPButton" type="TextureButton" parent="CardsCenter/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(230, 290)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("6_customip")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="StatusLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -400.0
+offset_top = -70.0
+offset_right = 400.0
+offset_bottom = -25.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="JoinModal" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ModalDimmer" type="ColorRect" parent="JoinModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.72)
+
+[node name="ModalCenter" type="CenterContainer" parent="JoinModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ModalPanel" type="PanelContainer" parent="JoinModal/ModalCenter"]
+custom_minimum_size = Vector2(440, 270)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="JoinModal/ModalCenter/ModalPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="VBoxContainer" type="VBoxContainer" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="ModalTitle" type="Label" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 28
+text = "JOIN A ROOM"
+horizontal_alignment = 1
+
+[node name="ModalSubtitle" type="Label" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "Enter the room code shared by your friend:"
+horizontal_alignment = 1
+
+[node name="InputHBox" type="HBoxContainer" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="CodeInput" type="LineEdit" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer/InputHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+placeholder_text = "e.g. A7B9"
+alignment = 1
+max_length = 8
+
+[node name="ModalPasteButton" type="Button" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer/InputHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 48)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "PASTE"
+
+[node name="ModalErrorLabel" type="Label" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ButtonsHBox" type="HBoxContainer" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="ModalCancelButton" type="Button" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer/ButtonsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "CANCEL"
+
+[node name="ModalJoinButton" type="Button" parent="JoinModal/ModalCenter/ModalPanel/MarginContainer/VBoxContainer/ButtonsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "JOIN ROOM"

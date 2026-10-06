@@ -18,6 +18,9 @@ const CharacterTexture = preload("res://Character/Character.png")
 @onready var host_ip_input: LineEdit = %HostIPInput
 @onready var host_port_input: LineEdit = %HostPortInput
 @onready var lan_room_list: VBoxContainer = %LANRoomList
+@onready var dedicated_server_input: LineEdit = %DedicatedServerInput
+@onready var dedicated_server_port_input: LineEdit = %DedicatedServerPortInput
+@onready var save_dedicated_server_btn: Button = %SaveDedicatedServerBtn
 @onready var room_panel: VBoxContainer = %RoomPanel
 @onready var player_list_container: VBoxContainer = %PlayerListContainer
 
@@ -33,6 +36,10 @@ func _ready() -> void:
 	name_input.text = PlayerData.player_name
 	ip_input.text = "127.0.0.1"
 	host_port_input.text = str(NetworkManagerScript.DEFAULT_PORT)
+	dedicated_server_input.text = PlayerData.dedicated_server_address
+	dedicated_server_port_input.text = str(PlayerData.dedicated_server_port)
+
+	save_dedicated_server_btn.pressed.connect(_on_save_dedicated_server_pressed)
 
 	if network_mgr:
 		if not network_mgr.player_list_changed.is_connected(_on_player_list_changed):
@@ -292,13 +299,38 @@ func _on_leave_pressed() -> void:
 	_update_ui_state(false)
 	status_label.text = "Left lobby."
 
+func _on_save_dedicated_server_pressed() -> void:
+	var addr := dedicated_server_input.text.strip_edges()
+	var port_str := dedicated_server_port_input.text.strip_edges()
+	var port := int(port_str) if port_str.is_valid_int() else 8910
+
+	if addr.is_empty():
+		addr = "10.24.60.105"
+
+	PlayerData.dedicated_server_address = addr
+	PlayerData.dedicated_server_port = port
+	PlayerData.save_data()
+
+	save_dedicated_server_btn.text = "SAVED! ✓"
+	var tree := get_tree()
+	if tree:
+		await tree.create_timer(1.2).timeout
+		if is_instance_valid(save_dedicated_server_btn):
+			save_dedicated_server_btn.text = "SAVE"
+
 func _on_back_pressed() -> void:
-	# go back to customize without actually leaving the room, n tell the host to wait up for us
 	back_button.disabled = true
 	if network_mgr and NetworkManagerScript.peer != null:
+		# in room, go back to customize without dropping connection
 		network_mgr.set_player_ready(false)
-	UITransitions.animate_out(self, _go_to_customization, [back_button])
+		UITransitions.animate_out(self, _go_to_customization, [back_button])
+	else:
+		# return to multiplayer mode selection
+		UITransitions.animate_out(self, _go_to_room_select, [back_button])
 	UITransitions.animate_node_out_up(back_button, Callable())
 
 func _go_to_customization() -> void:
 	get_tree().change_scene_to_file("res://Menu/PowerSelection.tscn")
+
+func _go_to_room_select() -> void:
+	get_tree().change_scene_to_file("res://Menu/RoomSelect.tscn")

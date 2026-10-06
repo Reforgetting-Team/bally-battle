@@ -19,9 +19,14 @@ const ExplosionScript = preload("res://Character/Explosion.gd")
 static var players: Dictionary = {}
 static var is_host: bool = false
 static var is_scene_transitioning: bool = false
-static var peer: ENetMultiplayerPeer = null
+static var peer: MultiplayerPeer = null
 static var instance: Node = null
 static var resolved_bomb_expiries: Dictionary = {}
+static var is_dedicated_server: bool = false
+static var current_room_code: String = ""
+static var room_host_peer_id: int = 1
+var _idle_server_time: float = 0.0
+const DEDICATED_IDLE_TIMEOUT: float = 300.0
 var _pending_player_deaths: Dictionary = {}
 var _death_batch_scheduled: bool = false
 var _scene_transition_id: int = 0
@@ -40,6 +45,7 @@ signal connection_failed
 signal server_disconnected
 signal match_started
 signal lan_rooms_changed
+signal room_info_updated(code: String, host_id: int)
 
 func _enter_tree() -> void:
 	instance = self
@@ -52,9 +58,40 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	_start_lan_discovery()
+	_check_cli_args()
+	if not is_dedicated_server:
+		_start_lan_discovery()
+
+func _check_cli_args() -> void:
+	# check if we were booted up as a dedicated headless room server on the vps
+	var args := OS.get_cmdline_user_args()
+	var is_room_server := false
+	var room_code := ""
+	var port := DEFAULT_PORT
+	
+	for i in range(args.size()):
+		var arg := args[i]
+		if arg == "--room-server" or arg == "--server":
+			is_room_server = true
+		elif arg == "--code" and i + 1 < args.size():
+			room_code = args[i + 1]
+		elif arg == "--port" and i + 1 < args.size():
+			port = int(args[i + 1])
+	
+	if is_room_server:
+		print("[BallyServer] Booting dedicated headless room server for code '%s' on port %d" % [room_code, port])
+		create_dedicated_room_server(room_code, port)
 
 func _process(delta: float) -> void:
+	if is_dedicated_server:
+		if players.is_empty() and not is_scene_transitioning:
+			_idle_server_time += delta
+			if _idle_server_time >= DEDICATED_IDLE_TIMEOUT:
+				print("[BallyServer] Room %s idle for %.1fs, shutting down cleanly" % [current_room_code, _idle_server_time])
+				get_tree().quit()
+		else:
+			_idle_server_time = 0.0
+
 	if not _lan_socket_ready:
 		return
 	_poll_lan_rooms()
@@ -159,6 +196,21 @@ static func can_start_match() -> bool:
 			return false
 	return true
 
+static func can_room_host_start() -> bool:
+	# check if the room host on the client side has the green light to press Start Match
+	if not is_in_room():
+		return false
+	if is_host and not is_dedicated_server:
+		return can_start_match()
+	if not PlayerData.is_room_host:
+		return false
+	if not PlayerData.debug_mode and players.size() < 2:
+		return false
+	for p in players.values():
+		if not p.get("ready", true):
+			return false
+	return true
+
 static func get_bindable_addresses() -> PackedStringArray:
 	# only real local interface addresses can get passed to set_bind_ip,
 	# anything else (like a friend's IP, a router IP, an inactive ZeroTier
@@ -203,25 +255,59 @@ func create_game(bind_address: String = "", port: int = DEFAULT_PORT) -> Error:
 	print("Server started on ", bind_address, ":", port)
 	return OK
 
+func create_dedicated_room_server(room_code: String, port: int) -> Error:
+	# so ts spins up the headless room on the vps so anyone w the code can connect
+	leave_game()
+	var ws := WebSocketMultiplayerPeer.new()
+	var err = ws.create_server(port, "0.0.0.0")
+	if err != OK:
+		push_error("Failed to start dedicated WebSocket room server on port %d: %s" % [port, err])
+		ws.close()
+		return err
+
+	peer = ws
+	multiplayer.multiplayer_peer = peer
+	is_host = true
+	is_dedicated_server = true
+	current_room_code = room_code
+	room_host_peer_id = -1
+	hosted_port = port
+	is_match_active = false
+	players.clear()
+	print("[BallyServer] Dedicated room server ready for room '%s' on port %d" % [room_code, port])
+	return OK
+
 func join_game(address: String = DEFAULT_IP, port: int = DEFAULT_PORT) -> Error:
-	# connect to ur friend's zerotier ip or just localhost for testing solo
+	# connect to ur friend's zerotier ip, a websocket tunnel or just localhost for testing solo
 	leave_game()
 	var target_ip = address.strip_edges()
 	if target_ip.is_empty():
 		target_ip = DEFAULT_IP
 
-	var client := ENetMultiplayerPeer.new()
-	var err = client.create_client(target_ip, port)
-	if err != OK:
-		push_error("Failed to create client connecting to %s:%d: %s" % [target_ip, port, err])
-		client.close()
-		return err
-
-	peer = client
-	multiplayer.multiplayer_peer = peer
-	is_host = false
-	print("Connecting to ", target_ip, ":", port)
-	return OK
+	if target_ip.begins_with("ws://") or target_ip.begins_with("wss://"):
+		var ws := WebSocketMultiplayerPeer.new()
+		var err = ws.create_client(target_ip)
+		if err != OK:
+			push_error("Failed to connect websocket client to %s: %s" % [target_ip, err])
+			ws.close()
+			return err
+		peer = ws
+		multiplayer.multiplayer_peer = peer
+		is_host = false
+		print("Connecting via WebSocket to ", target_ip)
+		return OK
+	else:
+		var client := ENetMultiplayerPeer.new()
+		var err = client.create_client(target_ip, port)
+		if err != OK:
+			push_error("Failed to create client connecting to %s:%d: %s" % [target_ip, port, err])
+			client.close()
+			return err
+		peer = client
+		multiplayer.multiplayer_peer = peer
+		is_host = false
+		print("Connecting to ", target_ip, ":", port)
+		return OK
 
 func leave_game() -> void:
 	# nuke the connection n clean up literally everything
@@ -233,6 +319,11 @@ func leave_game() -> void:
 	players.clear()
 	resolved_bomb_expiries.clear()
 	is_host = false
+	is_dedicated_server = false
+	current_room_code = ""
+	room_host_peer_id = 1
+	PlayerData.current_room_code = ""
+	PlayerData.is_room_host = false
 	is_scene_transitioning = false
 	_scene_transition_id = 0
 	_scene_ready_peers.clear()
@@ -317,8 +408,10 @@ func _on_server_disconnected() -> void:
 	print("Server disconnected.")
 	leave_game()
 	server_disconnected.emit()
-	if get_tree().current_scene and get_tree().current_scene.scene_file_path != "res://Menu/Lobby.tscn":
-		get_tree().change_scene_to_file("res://Menu/Lobby.tscn")
+	if get_tree().current_scene:
+		var curr_path = get_tree().current_scene.scene_file_path
+		if curr_path != "res://Menu/RoomSelect.tscn" and curr_path != "res://Menu/Lobby.tscn" and curr_path != "res://Menu/RoomLobby.tscn":
+			get_tree().change_scene_to_file("res://Menu/RoomSelect.tscn")
 
 func _on_peer_connected(id: int) -> void:
 	print("Peer connected: ", id)
@@ -327,6 +420,12 @@ func _on_peer_disconnected(id: int) -> void:
 	print("Peer disconnected: ", id)
 	if is_host:
 		players.erase(id)
+		if is_dedicated_server and room_host_peer_id == id:
+			if not players.is_empty():
+				room_host_peer_id = int(players.keys()[0])
+				_sync_room_info.rpc(current_room_code, room_host_peer_id)
+			else:
+				room_host_peer_id = -1
 		_sync_players.rpc(players)
 		player_list_changed.emit()
 		if is_scene_transitioning:
@@ -338,12 +437,44 @@ func _register_player(info: Dictionary) -> void:
 	if not is_host:
 		return
 	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id <= 1:
+	if sender_id <= 1 and not is_dedicated_server:
 		return
 	players[sender_id] = _sanitize_player_info(info)
 	print("Registered peer %d: %s" % [sender_id, players[sender_id]])
+	if is_dedicated_server:
+		if room_host_peer_id == -1:
+			room_host_peer_id = sender_id
+		_sync_room_info.rpc(current_room_code, room_host_peer_id)
 	_sync_players.rpc(players)
 	player_list_changed.emit()
+
+@rpc("authority", "call_local", "reliable")
+func _sync_room_info(code: String, host_id: int) -> void:
+	current_room_code = code
+	room_host_peer_id = host_id
+	PlayerData.current_room_code = code
+	PlayerData.is_room_host = (multiplayer.get_unique_id() == host_id)
+	room_info_updated.emit(code, host_id)
+
+func request_start_room_match(scene_path: String = "res://Areas/Grass1.tscn") -> void:
+	if peer == null:
+		return
+	if is_host and not is_dedicated_server:
+		start_game(scene_path)
+	else:
+		_request_start_room_match_rpc.rpc_id(1, scene_path)
+
+@rpc("any_peer", "reliable")
+func _request_start_room_match_rpc(scene_path: String) -> void:
+	if not is_host:
+		return
+	var sender_id = multiplayer.get_remote_sender_id()
+	if is_dedicated_server and sender_id != room_host_peer_id and sender_id != 1:
+		push_warning("Non-host peer %d tried to start room match!" % sender_id)
+		return
+	if not can_start_match():
+		return
+	start_game(scene_path)
 
 func _sanitize_player_info(info: Dictionary) -> Dictionary:
 	# only keep the lobby fields the game understands, since clients send this dictionary

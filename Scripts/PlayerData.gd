@@ -15,6 +15,12 @@ var vsync_enabled: bool = true
 # 0 windowed, 1 borderless, 2 fullscreen. phones n web ignore this
 var window_mode: int = 2
 
+# global dedicated server settings for playing online w the boys
+var dedicated_server_address: String = "10.24.60.105"
+var dedicated_server_port: int = 8910
+var current_room_code: String = ""
+var is_room_host: bool = false
+
 # audio volume levels (0.0 to 1.0 linear)
 var master_volume: float = 1.0
 var music_volume: float = 1.0
@@ -47,6 +53,10 @@ func load_data() -> void:
 			vsync_enabled = config.get_value("graphics", "vsync_enabled", vsync_enabled)
 		if config.has_section_key("graphics", "window_mode"):
 			window_mode = config.get_value("graphics", "window_mode", window_mode)
+		if config.has_section_key("server", "dedicated_server_address"):
+			dedicated_server_address = config.get_value("server", "dedicated_server_address", dedicated_server_address)
+		if config.has_section_key("server", "dedicated_server_port"):
+			dedicated_server_port = int(config.get_value("server", "dedicated_server_port", dedicated_server_port))
 		if config.has_section_key("audio", "master_volume"):
 			master_volume = clampf(float(config.get_value("audio", "master_volume", master_volume)), 0.0, 1.0)
 		if config.has_section_key("audio", "music_volume"):
@@ -61,6 +71,8 @@ func save_data() -> void:
 	config.set_value("graphics", "fps_limit", fps_limit)
 	config.set_value("graphics", "vsync_enabled", vsync_enabled)
 	config.set_value("graphics", "window_mode", window_mode)
+	config.set_value("server", "dedicated_server_address", dedicated_server_address)
+	config.set_value("server", "dedicated_server_port", dedicated_server_port)
 	config.set_value("audio", "master_volume", master_volume)
 	config.set_value("audio", "music_volume", music_volume)
 	config.save(save_path)

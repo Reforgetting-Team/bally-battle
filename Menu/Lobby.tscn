@@ -113,7 +113,7 @@ text = "Nearby LAN Rooms"
 horizontal_alignment = 1
 
 [node name="LANRoomScroll" type="ScrollContainer" parent="CenterContainer/MainVBox/ConnectionPanel/LANRoomsPanel" unique_id=1337445003]
-custom_minimum_size = Vector2(0, 84)
+custom_minimum_size = Vector2(0, 75)
 layout_mode = 2
 
 [node name="LANRoomList" type="VBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel/LANRoomsPanel/LANRoomScroll" unique_id=1337445004]
@@ -121,6 +121,43 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/MainVBox/ConnectionPanel"]
+layout_mode = 2
+
+[node name="DedicatedServerPanel" type="VBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DedicatedServerTitle" type="Label" parent="CenterContainer/MainVBox/ConnectionPanel/DedicatedServerPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Custom Dedicated Server Config:"
+
+[node name="DedicatedServerHBox" type="HBoxContainer" parent="CenterContainer/MainVBox/ConnectionPanel/DedicatedServerPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DedicatedServerInput" type="LineEdit" parent="CenterContainer/MainVBox/ConnectionPanel/DedicatedServerPanel/DedicatedServerHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+placeholder_text = "Server IP / Tunnel URL"
+
+[node name="DedicatedServerPortInput" type="LineEdit" parent="CenterContainer/MainVBox/ConnectionPanel/DedicatedServerPanel/DedicatedServerHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+placeholder_text = "8910"
+
+[node name="SaveDedicatedServerBtn" type="Button" parent="CenterContainer/MainVBox/ConnectionPanel/DedicatedServerPanel/DedicatedServerHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(85, 0)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+text = "SAVE"
 
 [node name="RoomPanel" type="VBoxContainer" parent="CenterContainer/MainVBox" unique_id=11223359]
 unique_name_in_owner = true
