@@ -36,9 +36,9 @@ func _ready() -> void:
 	var url_discovery_req := HTTPRequest.new()
 	url_discovery_req.timeout = 3.0
 	add_child(url_discovery_req)
-	url_discovery_req.request_completed.connect(func(_result, response_code, _headers, body):
+	url_discovery_req.request_completed.connect(func(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 		if response_code == 200:
-			var remote_url := body.get_string_from_utf8().strip_edges()
+			var remote_url: String = body.get_string_from_utf8().strip_edges()
 			if (remote_url.begins_with("https://") or remote_url.begins_with("http://")) and ("trycloudflare.com" in PlayerData.dedicated_server_address or PlayerData.dedicated_server_address == PlayerData.DEFAULT_GLOBAL_SERVER):
 				PlayerData.dedicated_server_address = remote_url
 		url_discovery_req.queue_free()
