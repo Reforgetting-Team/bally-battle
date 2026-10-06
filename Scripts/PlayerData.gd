@@ -15,8 +15,10 @@ var vsync_enabled: bool = true
 # 0 windowed, 1 borderless, 2 fullscreen. phones n web ignore this
 var window_mode: int = 2
 
+const DEFAULT_GLOBAL_SERVER: String = "https://ranking-accurately-cape-date.trycloudflare.com"
+
 # global dedicated server settings for playing online w the boys
-var dedicated_server_address: String = "10.24.60.105"
+var dedicated_server_address: String = DEFAULT_GLOBAL_SERVER
 var dedicated_server_port: int = 8910
 var current_room_code: String = ""
 var is_room_host: bool = false
@@ -55,6 +57,10 @@ func load_data() -> void:
 			window_mode = config.get_value("graphics", "window_mode", window_mode)
 		if config.has_section_key("server", "dedicated_server_address"):
 			dedicated_server_address = config.get_value("server", "dedicated_server_address", dedicated_server_address)
+			if dedicated_server_address == "10.24.60.105" or dedicated_server_address.strip_edges().is_empty():
+				dedicated_server_address = DEFAULT_GLOBAL_SERVER
+				config.set_value("server", "dedicated_server_address", dedicated_server_address)
+				config.save(save_path)
 		if config.has_section_key("server", "dedicated_server_port"):
 			dedicated_server_port = int(config.get_value("server", "dedicated_server_port", dedicated_server_port))
 		if config.has_section_key("audio", "master_volume"):

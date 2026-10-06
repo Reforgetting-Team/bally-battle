@@ -32,6 +32,19 @@ func _ready() -> void:
 	add_child(http_req)
 	http_req.request_completed.connect(_on_http_request_completed)
 
+	# background check to see if global tunnel URL was updated on GitHub
+	var url_discovery_req := HTTPRequest.new()
+	url_discovery_req.timeout = 3.0
+	add_child(url_discovery_req)
+	url_discovery_req.request_completed.connect(func(_result, response_code, _headers, body):
+		if response_code == 200:
+			var remote_url := body.get_string_from_utf8().strip_edges()
+			if (remote_url.begins_with("https://") or remote_url.begins_with("http://")) and ("trycloudflare.com" in PlayerData.dedicated_server_address or PlayerData.dedicated_server_address == PlayerData.DEFAULT_GLOBAL_SERVER):
+				PlayerData.dedicated_server_address = remote_url
+		url_discovery_req.queue_free()
+	)
+	url_discovery_req.request("https://raw.githubusercontent.com/Reforgetting-Team/bally-battle/server/server_url.txt")
+
 	create_room_btn.pressed.connect(_on_create_room_pressed)
 	join_room_btn.pressed.connect(_on_join_room_pressed)
 	custom_ip_btn.pressed.connect(_on_custom_ip_pressed)
@@ -65,8 +78,8 @@ func _setup_button_hover_effects(btn: TextureButton) -> void:
 func _get_server_base_url() -> String:
 	# builds the base url to talk to our global server coordinator
 	var addr: String = PlayerData.dedicated_server_address.strip_edges()
-	if addr.is_empty():
-		addr = "10.24.60.105"
+	if addr.is_empty() or addr == "10.24.60.105":
+		addr = PlayerData.DEFAULT_GLOBAL_SERVER
 	var port: int = PlayerData.dedicated_server_port if PlayerData.dedicated_server_port > 0 else 8910
 
 	# if player typed a full domain or tunnel url (like https://something.trycloudflare.com)
@@ -81,8 +94,8 @@ func _get_server_base_url() -> String:
 func _get_server_ws_url(room_code: String) -> String:
 	# builds websocket url for connecting to the specific room
 	var addr: String = PlayerData.dedicated_server_address.strip_edges()
-	if addr.is_empty():
-		addr = "10.24.60.105"
+	if addr.is_empty() or addr == "10.24.60.105":
+		addr = PlayerData.DEFAULT_GLOBAL_SERVER
 	var port: int = PlayerData.dedicated_server_port if PlayerData.dedicated_server_port > 0 else 8910
 
 	if addr.begins_with("https://"):

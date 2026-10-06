@@ -305,7 +305,7 @@ func _on_save_dedicated_server_pressed() -> void:
 	var port := int(port_str) if port_str.is_valid_int() else 8910
 
 	if addr.is_empty():
-		addr = "10.24.60.105"
+		addr = PlayerData.DEFAULT_GLOBAL_SERVER
 
 	PlayerData.dedicated_server_address = addr
 	PlayerData.dedicated_server_port = port
